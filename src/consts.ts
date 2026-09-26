@@ -2,7 +2,7 @@
 
 export const SITE_TITLE = 'oem/links';
 export const SITE_DESCRIPTION =
-	'One page for everything we make and everything we point at. Built in-house, no tracking, no runtime.';
+	'Everywhere to find me, in one place. Built in-house, no tracking, no runtime.';
 
 export const AUTHOR_HANDLE = 'omiinaya';
 export const AUTHOR_EMAIL = 'omar@mrxlab.net';

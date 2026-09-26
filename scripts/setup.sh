@@ -45,7 +45,12 @@ echo "==> running content tests"
 npm test
 
 echo "==> building"
-npm run build
+# The canonical build targets GitHub Pages (base=/oem-links/). The self-hosted
+# service serves from a domain ROOT, so override the base here or every asset
+# 404s behind a /oem-links/ prefix that does not exist on this host.
+SITE_BASE="${SITE_BASE:-/}" \
+SITE_URL="${SITE_URL:-http://$(hostname -I | awk '{print $1}'):${PORT}}" \
+	npm run build
 
 [[ -f dist/index.html ]] || { echo "error: dist/index.html missing after build" >&2; exit 1; }
 

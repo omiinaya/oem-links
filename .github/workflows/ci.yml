@@ -5,8 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-# No secrets needed and no deploy step: this repo is private and the site is
-# self-hosted, so CI only has to prove the build and the content checks pass.
+# No secrets needed: the only workflow that needs a token is the Pages deploy,
+# and that is a separate workflow. This one just has to prove the build and the
+# content checks pass.
 permissions:
   contents: read
 
@@ -35,3 +36,9 @@ jobs:
 
       - name: Sanity-check the build output
         run: test -f dist/index.html && grep -q 'class="link-row"' dist/index.html
+
+      # The Pages site is served from a /oem-links/ prefix. If base is ever
+      # wrong the build still succeeds and every asset 404s in production, so
+      # assert the prefix is actually in the output.
+      - name: Assert the GitHub Pages base is applied
+        run: grep -q 'href="/oem-links/_astro/' dist/index.html

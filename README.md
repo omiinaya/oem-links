@@ -4,6 +4,9 @@ A self-hosted link page, built in the same CLI-mono house style as
 [oem/log](https://omiinaya.github.io/oem-log/). Static Astro output, no
 tracking, no runtime.
 
+Live: **[omiinaya.github.io/oem-links](https://omiinaya.github.io/oem-links/)**
+(public, deployed by GitHub Pages on every push to `main`).
+
 The page is deliberately **its own thing**: one flat list of socials under a
 single `socials` heading, and no reference anywhere to oem/log or any other
 site. It does not backlink to the blog through the header, the footer, the
@@ -114,12 +117,20 @@ Comments that are not inside a script or style block must be HTML comments.
 
 ## Environment variables
 
-Both are optional and read in `astro.config.mjs`:
+Both are optional and read in `astro.config.mjs`. The defaults target GitHub
+Pages, which is the canonical deployment:
 
 | Variable | Default | Use |
 | --- | --- | --- |
-| `SITE_URL` | `https://links.mrxlab.net` | canonical/OG URLs |
-| `SITE_BASE` | `/` | set to `/links/` for subpath hosting |
+| `SITE_URL` | `https://omiinaya.github.io` | canonical/OG origin |
+| `SITE_BASE` | `/oem-links/` | path prefix; **must** match the Pages repo name |
+
+A project Pages site is served from `https://<user>.github.io/<repo>/`, so a
+wrong `SITE_BASE` still builds cleanly and then 404s every asset in production.
+CI asserts the prefix is present in the built HTML to catch exactly that.
+
+`scripts/setup.sh` overrides both when it builds for the self-hosted service
+(`SITE_BASE=/`), so the LAN copy keeps serving from a domain root.
 
 ## Tests
 
@@ -147,10 +158,15 @@ PORT=8090 ./scripts/setup.sh        # different port
 `oem-links.service` (system scope), which runs `scripts/serve.py` as `nobody`
 out of the repo's `dist/`.
 
-Run it from the **real** path (`/mnt/pve/mrx-thunder/projects/links`), not the
-`/root/projects/links` symlink: the unit sets `ProtectHome=true`, so a
-`WorkingDirectory` under `/root` is unreadable and the service dies on start.
+Run it from the repo's **real** path, not a convenience symlink under `/root`:
+the unit sets `ProtectHome=true`, so a `WorkingDirectory` under `/root` is
+unreadable and the service dies on start.
 
 `scripts/serve.py` is a dependency-free static server on purpose. It replaces
 the `npx --yes serve` this used to run, which meant an unpinned package
 download from the npm registry on every service start.
+
+## License
+
+See [LICENSE](LICENSE). The Atkinson fonts in `src/assets/fonts/` and the
+brand marks in `src/lib/*.astro` carry their own upstream licences.

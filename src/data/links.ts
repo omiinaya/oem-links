@@ -43,7 +43,7 @@ export const GROUP_ORDER = ['socials'] as const;
 export const LINKS: LinkItem[] = [
 	{
 		title: 'GitHub',
-		description: 'Code, experiments, and things we are building',
+		description: 'Code, experiments, and things I am building',
 		href: 'https://github.com/omiinaya',
 		icon: 'Code',
 		kind: 'profile',
@@ -67,7 +67,7 @@ export const LINKS: LinkItem[] = [
 	},
 	{
 		title: 'Email',
-		description: 'Say hi, or tell us what to build next',
+		description: 'Say hi, or tell me what to build next',
 		href: 'mailto:omar@mrxlab.net',
 		icon: 'Mail',
 		kind: 'email',

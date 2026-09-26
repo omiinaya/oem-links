@@ -7,7 +7,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- GitHub Pages deployment (`.github/workflows/deploy.yml`), publishing to
+  <https://omiinaya.github.io/oem-links/> on every push to `main`. Runs on the
+  self-hosted CT103 runner, not GitHub-hosted, because the account's Actions
+  minute budget blocks hosted jobs before they start.
+- `LICENSE` (MIT), with the bundled third-party licences called out: the
+  Atkinson fonts (SIL OFL 1.1) and the brand marks (Simple Icons, CC0-1.0).
+- An "everything to find me" copy pass: the page is a personal page, so hero,
+  meta description and both row descriptions are first-person singular.
+
+### Fixed
+- The GitHub Pages `base` prefix is asserted in CI. A wrong prefix builds
+  cleanly and then 404s every asset in production, a failure mode the existing
+  checks could not see.
+
 ### Changed
+- **The repository is now public.**
+- `SITE_URL` and `SITE_BASE` now default to the Pages deployment
+  (`https://omiinaya.github.io` and `/oem-links/`) instead of a private LAN
+  hostname. Both stay overridable, and `setup.sh` builds the self-hosted copy
+  with `SITE_BASE=/` so it keeps serving from a domain root.
+- README no longer names the internal project path; it states the symlink rule
+  instead.
 - The page is now its own thing. Removed every cross-reference to oem/log:
   the header nav, the `oem/log` and `RSS Feed` link rows, the blog's
   `notes`/`about` nav entries, and the inherited `rel="sitemap"` and RSS
