@@ -39,9 +39,11 @@ jobs:
 
       # Assets are referenced with an absolute path built from `base`. A wrong
       # base still builds cleanly and then 404s every asset in production, so
-      # assert the site is served from the root with no leftover subpath prefix.
-      - name: Assert the build serves from the domain root
+      # assert this job's build matches the base it declares. This job uses the
+      # config defaults; deploy.yml overrides SITE_BASE for the Pages fallback.
+      - name: Assert the build matches the configured base
         run: |
           test -f dist/index.html
-          grep -q 'href="/_astro/' dist/index.html
-          ! grep -q 'oem-links/_astro' dist/index.html
+          grep -q "$BASE_PREFIX" dist/index.html
+        env:
+          BASE_PREFIX: href="/_astro/

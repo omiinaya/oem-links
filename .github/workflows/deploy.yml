@@ -36,14 +36,20 @@ jobs:
         run: npm test
 
       - name: Build
-        # No SITE_BASE override: the canonical build targets the custom domain,
-        # which is served from its own root.
+        # Build for the GitHub Pages fallback URL. The canonical custom domain
+        # (links.oem.ngo) needs base "/", but while that domain is not resolving
+        # this fallback path is the only reachable URL, and it requires
+        # base "/oem-links/". Flip SITE_BASE/SITE_URL together in
+        # astro.config.mjs once the custom domain resolves.
+        env:
+          SITE_BASE: /oem-links/
+          SITE_URL: https://omiinaya.github.io
         run: npm run build
 
-      - name: Assert the build serves from the domain root
+      - name: Assert the build serves from the fallback path
         run: |
-          grep -q 'href="/_astro/' dist/index.html
-          ! grep -q 'oem-links/_astro' dist/index.html
+          grep -q 'href="/oem-links/_astro/' dist/index.html
+          ! grep -qE 'href="/_astro/' dist/index.html
 
       - uses: actions/configure-pages@v5
 

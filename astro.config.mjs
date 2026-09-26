@@ -4,13 +4,17 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 //
-// Defaults target the canonical deployment, the custom domain
-// https://links.oem.ngo. Because that is a real hostname served from its own
-// root, `base` is "/" and no path prefix is involved.
+// Defaults target the canonical deployment.
 //
-// Both values stay overridable: setup.sh passes SITE_BASE=/ explicitly for the
-// self-hosted LAN service, and SITE_BASE can be set to "/<subpath>/" to host
-// the site under a subdirectory of some other domain.
+// IMPORTANT: the canonical host is a custom domain (https://links.oem.ngo),
+// which is served from its own root, so `base` is "/". If the custom domain is
+// not active yet and the site must be reachable on the GitHub Pages fallback
+// URL instead, the fallback is served from https://omiinaya.github.io/oem-links/
+// and therefore needs base="/oem-links/". Set SITE_BASE=/oem-links/ to build
+// for that path; the build is otherwise identical.
+//
+// Both values stay overridable, and setup.sh passes SITE_BASE=/ explicitly for
+// the self-hosted LAN service.
 export default defineConfig({
 	site: process.env.SITE_URL ?? 'https://links.oem.ngo',
 	base: process.env.SITE_BASE ?? '/',
