@@ -12,7 +12,10 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Self-hosted (CT103). GitHub-hosted runners do not work on this account:
+    # the Actions minute budget blocks hosted jobs before they start, which
+    # shows up as a ~0s failure with no steps executed.
+    runs-on: [self-hosted, linux, x64, pve-scripts]
     steps:
       - uses: actions/checkout@v4
 
@@ -32,10 +35,3 @@ jobs:
 
       - name: Sanity-check the build output
         run: test -f dist/index.html && grep -q 'class="link-row"' dist/index.html
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: dist/
-          retention-days: 7
