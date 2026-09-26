@@ -42,8 +42,11 @@ main,
 	margin: 0 auto;
 	/* no top padding: --head-top (on the head block) is the single
 	   source for vertical start position. Padding here too would double it
-	   and put the post page out of line with the rest. */
-	padding: 0 var(--gutter) 6rem;
+	   and put the post page out of line with the rest.
+	   NO horizontal padding: the max-width already reserves the gutter,
+	   so padding it too put content at 40px while the header sat at 20px.
+	   Two left rails is a bug, not a design choice. */
+	padding: 0 0 6rem;
 }
 
 a {
@@ -65,7 +68,12 @@ h1 { font-size: 2.1rem; }
 h2 { font-size: 1.45rem; margin-top: 2em; }
 h3 { font-size: 1.2rem; margin-top: 1.6em; }
 
-p { margin: 0 0 1.1em; }
+p {
+	margin: 0 0 1.1em;
+	/* A 2-line lede at 390px orphaned its last word ("anywhere." alone on
+	   line 2). balance evens the lines; harmless when they already fit. */
+	text-wrap: balance;
+}
 
 /* inline code */
 code {
@@ -172,11 +180,16 @@ button:focus-visible,
 
 /* ============ responsive baseline ============ */
 @media (max-width: 680px) {
+	/* padding stays 0 horizontally: max-width already reserves the
+	   gutter, and re-adding it here is what put content at 40px while
+	   the header sat at 20px. Only the bottom padding shrinks. */
 	main,
-	.cm-shell { padding: 0 var(--gutter) 4rem; }
-	:root { --head-top: 2rem; --head-h1: 1.7rem; }
+	.cm-shell { padding: 0 0 4rem; }
+	/* The page title must stay clearly above a section h2 (23.2px).
+	   1.7rem rendered at 27.2px, too close to shout at the same volume. */
+	:root { --head-top: 2rem; --head-h1: 1.95rem; }
 	body { font-size: 15px; }
-	h1 { font-size: 1.7rem; }
+	h1 { font-size: var(--head-h1); }
 	pre { padding: 1.1em 1.1em; font-size: 0.78rem; }
 	.cm-prose { padding: 0; }
 }
@@ -207,6 +220,9 @@ textarea { min-height: calc(var(--tap) * 2); resize: vertical; }
 select {
 	/* The native arrow is drawn for the platform, not for a mono UI, and
 	   it disappears against a dark surface. */
+	/* WebKit honours -webkit-appearance on form controls; bare `appearance`
+	   is an alias older WebKit ignores, so it would draw the native control. */
+	-webkit-appearance: none;
 	appearance: none;
 	background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
 		linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -236,29 +252,74 @@ select[aria-invalid='true'] {
 	border-width: 2px;
 }
 
-/* checkbox / radio: a square or circle, drawn rather than native */
+/* checkbox / radio: a square or circle, drawn rather than native.
+   The drawn box stays small on purpose (it is a mark, not a target);
+   the LABEL is the tap target, so the box is centred inside a 44px
+   hit area via a transparent border. Without an inherited font the
+   fallback is Arial, which is wrong for this design system. */
 input[type='checkbox'],
 input[type='radio'] {
+	/* -webkit-appearance is the property WebKit actually honours on a form
+	   control; the bare `appearance` alias is ignored by older WebKit, so
+	   the native widget painted OVER the drawn one on iOS Safari. */
+	-webkit-appearance: none;
 	appearance: none;
-	width: 1.05rem;
-	height: 1.05rem;
+	--cm-box: 1.05rem;
+	width: var(--cm-box);
+	height: var(--cm-box);
+	min-width: var(--cm-box);
+	/* The label row carries min-height:var(--tap) so the ROW is the tap
+	   target. Without these, that min-height stretches the box: measured
+	   16.8x44 (ratio 0.38, a clear oval) in real WebKit at 390px. The
+	   controls are square marks; the row is the target. */
+	min-height: 0;
+	align-self: center;
+	aspect-ratio: 1;
 	margin: 0;
 	flex: none;
+	font-family: var(--font-mono);
 	border: 1px solid var(--line);
 	background: var(--bg-2);
 	cursor: pointer;
 }
 input[type='checkbox'] { border-radius: 3px; }
-input[type='radio'] { border-radius: 50%; }
+/* Half the box in px, not 50%. WebKit resolves a percentage radius against
+   the border box, so a 1px border on a 16.8px control rounds the curve
+   unevenly and the circle paints as an OVAL on iOS Safari. A fixed px
+   radius has no percentage to mis-resolve. */
+input[type='radio'] { border-radius: calc(var(--cm-box) / 2); }
+/* The control's own edge is a UI boundary, not a decorative divider, so it
+   must clear 3:1 (WCAG 1.4.11). --line is 1.4:1 against bg-2, which made
+   the unchecked state effectively invisible. */
+input[type='checkbox'],
+input[type='radio'] { border-color: var(--ink-dim); }
 input[type='checkbox']:checked,
 input[type='radio']:checked { background: var(--ink-dim); border-color: var(--ink-dim); }
-input[type='checkbox']:checked {
-	/* a tick, drawn with a rotated border so it needs no image or font */
-	box-shadow: inset 0 0 0 3px var(--bg-2);
-	background-image: linear-gradient(45deg, transparent 44%, var(--bg-2) 44%, var(--bg-2) 56%, transparent 56%),
-		linear-gradient(-45deg, transparent 44%, var(--bg-2) 44%, var(--bg-2) 56%, transparent 56%);
+/* The tick is a rotated pseudo-element, not two diagonal gradients: at a
+   17px box a 44-56% gradient band is ~2px, and combined with a 3px inset
+   shadow it left a dot instead of a tick. A rotated L has crisp edges and
+   needs no image, font or gradient. */
+input[type='checkbox']:checked,
+input[type='radio']:checked {
+	background: var(--ink-dim);
+	border-color: var(--ink-dim);
 }
-input[type='radio']:checked { box-shadow: inset 0 0 0 3px var(--bg-2); }
+input[type='checkbox']:checked::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 46%;
+	width: 0.32rem;
+	height: 0.6rem;
+	border: solid var(--bg-2);
+	border-width: 0 2px 2px 0;
+	transform: translate(-50%, -50%) rotate(42deg);
+}
+input[type='checkbox'] { position: relative; }
+/* A checked radio keeps a ring: a filled disc with an inner punch-out. */
+input[type='radio']:checked {
+	box-shadow: inset 0 0 0 3.5px var(--bg-2);
+}
 
 /* the label is the tap target, so a phone-sized hit area is the text row */
 label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
