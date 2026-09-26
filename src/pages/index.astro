@@ -26,7 +26,6 @@ const count = visible.length;
 
 /** Short host label for the right-hand column, e.g. 'infosec.exchange'. */
 function hostOf(href: string): string {
-	if (href.startsWith('mailto:')) return '@';
 	try {
 		return new URL(href).hostname.replace(/^www\./, '');
 	} catch {
@@ -46,7 +45,7 @@ function hostOf(href: string): string {
 
 	<section class="status">
 		<span class="lbl">status</span>
-		<span class="val">● static build · github pages · {count} link{count === 1 ? '' : 's'}</span>
+		<span class="val">● static build · links.oem.ngo · {count} link{count === 1 ? '' : 's'}</span>
 	</section>
 
 	{
@@ -76,7 +75,7 @@ function hostOf(href: string): string {
 										<span class="link-desc">{link.description}</span>
 									</span>
 									<span class="link-host" aria-hidden="true">
-										{isEmail ? '@' : hostOf(link.href)}
+										{isEmail ? 'email' : hostOf(link.href)}
 									</span>
 									<span class="link-sym" aria-hidden="true">▸</span>
 								</a>

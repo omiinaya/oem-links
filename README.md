@@ -5,7 +5,8 @@ A self-hosted link page, built in the same CLI-mono house style as
 tracking, no runtime.
 
 Live: **[links.oem.ngo](https://links.oem.ngo/)** (public, MIT, deployed by
-GitHub Pages on every push to `main`).
+GitHub Pages on every push to `main`). The `omiinaya.github.io/oem-links/` URL
+also resolves and serves the same build.
 
 The page is deliberately **its own thing**: one flat list of socials under a
 single `socials` heading, and no reference anywhere to oem/log or any other

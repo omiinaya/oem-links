@@ -15,6 +15,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Custom domain **[links.oem.ngo](https://links.oem.ngo/)**, on the Cloudflare
   zone `oem.ngo` as a proxied CNAME to `omiinaya.github.io`, with the CNAME
   registered on the Pages site.
+  Note: Cloudflare did not publish the DNS record for roughly 25 minutes after
+  creating it, and registering the Pages CNAME before the record resolved made
+  GitHub 301 the `omiinaya.github.io` URL to an unresolvable host, which took
+  the site offline. Confirm the domain resolves before registering the CNAME.
 - `LICENSE` (MIT), with the bundled third-party licences called out: the
   Atkinson fonts (SIL OFL 1.1) and the brand marks (Simple Icons, CC0-1.0).
 - An "everything to find me" copy pass: the page is a personal page, so hero,
