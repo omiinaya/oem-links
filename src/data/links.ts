@@ -58,6 +58,14 @@ export const LINKS: LinkItem[] = [
 		visible: true,
 	},
 	{
+		title: 'Blog',
+		description: 'Field notes, gotchas, and reusable tricks',
+		href: 'https://log.oem.ngo/',
+		icon: 'BookOpen',
+		kind: 'profile',
+		visible: true,
+	},
+	{
 		title: 'LinkedIn',
 		description: 'Professional profile and work history',
 		href: 'https://www.linkedin.com/in/omiinaya',

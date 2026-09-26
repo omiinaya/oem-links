@@ -159,9 +159,11 @@ test('visible social links point at the expected platforms', () => {
 	}
 });
 
-test('the page is self-contained: no blog/cross-site references', async () => {
-	// The user asked for links to be its own thing: nothing on this page may
-	// point back at oem/log or any other site, apart from the listed links.
+test('the page chrome does not cross-link to the blog', async () => {
+	// Deliberately scoped to CHROME (header, footer, head, layout, page shell).
+	// The blog may appear in src/data/links.ts, because a link the user chose to
+	// share is content, not a backlink. What must never come back is the header
+	// nav, the footer, or a <link> tag quietly pointing at oem/log.
 	const srcDir = new URL('../src/', import.meta.url);
 	const offenders: string[] = [];
 	for (const rel of [
@@ -172,13 +174,13 @@ test('the page is self-contained: no blog/cross-site references', async () => {
 		'pages/index.astro',
 	]) {
 		const text = await readFile(new URL(rel, srcDir), 'utf8');
-		if (/oem-log|omiinaya\.github\.io/.test(text)) offenders.push(rel);
+		if (/oem-log|log\.oem\.ngo/.test(text)) offenders.push(rel);
 	}
 	assert.deepEqual(
 		offenders,
 		[],
 		`these files still reference the blog: ${offenders.join(', ')}. `
-			+ 'This page must not link back to oem/log.',
+			+ 'Chrome must not cross-link to oem/log; put shared links in src/data/links.ts.',
 	);
 });
 

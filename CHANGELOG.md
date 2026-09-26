@@ -8,6 +8,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+- A **Blog** row pointing at <https://log.oem.ngo/>, third in the list. It is a
+  row in `src/data/links.ts` like any other link, deliberately not a header or
+  footer entry.
+- The "no blog reference" test was retitled and rescoped to the chrome (header,
+  footer, head, layout, page shell). The blog is allowed in the link data, where
+  it is content; it is still banned from the chrome, where it would be a
+  backlink. The blog's canonical domain is now also matched.
 - GitHub Pages deployment (`.github/workflows/deploy.yml`), publishing on
   every push to `main`. Runs on a self-hosted runner, not GitHub-hosted,
   because the account's Actions minute budget blocks hosted jobs before they

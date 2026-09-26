@@ -8,10 +8,12 @@ Live: **[links.oem.ngo](https://links.oem.ngo/)** (public, MIT, deployed by
 GitHub Pages on every push to `main`). The `omiinaya.github.io/oem-links/` URL
 also resolves and serves the same build.
 
-The page is deliberately **its own thing**: one flat list of socials under a
-single `socials` heading, and no reference anywhere to oem/log or any other
-site. It does not backlink to the blog through the header, the footer, the
-layout, or stray `<link>` tags. Adding one is a test failure (see **Tests**).
+The page is deliberately **its own thing**: one flat list under a single
+`socials` heading, and the chrome (header, footer, `<head>`, layout) never
+references oem/log or any other site. The blog appears only as a row in the
+list, because a link you chose to share is content, not a backlink. A stray
+`notes`/`about` nav entry or a `<link rel="sitemap">` pointing at the blog is a
+test failure (see **Tests**).
 
 ## Stack
 
