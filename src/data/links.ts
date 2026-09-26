@@ -1,23 +1,32 @@
 // Every link on the page lives here. Edit this file, commit, done.
 //
+// This is a plain link page: one flat list of socials, no sections beyond
+// that, and nothing that points anywhere except the links you list here.
+// Do not add blog/cross-site navigation here, in the header, or in the
+// layout — the page is its own thing.
+//
 // icon: any PascalCase name exported by @lucide/astro
 //   https://lucide.dev/icons  ·  find the exact name before using it
 // kind:
-//   'internal' → opens in a new tab, but a same-domain route
-//   'external' → third party, gets rel="noopener"
-//   'email'    → mailto:
+//   'profile' → a social/profile page, opens in a new tab
+//   'email'   → mailto:, stays in this tab
 
 export interface LinkItem {
 	/** Text shown as the link title. */
 	title: string;
 	/** One line under the title. Keep it concrete, not marketing. */
 	description: string;
-	/** Absolute URL, or a site-relative path like '/blog/'. */
+	/** Absolute URL, or a mailto: for the email kind. */
 	href: string;
 	/** PascalCase icon name from @lucide/astro. */
 	icon: string;
-	kind: 'internal' | 'external' | 'email';
-	/** Optional group heading. Links render in the order they're declared. */
+	kind: 'profile' | 'email';
+	/**
+	 * Section heading. The page has one section ('socials'); this defaults to
+	 * it so links stay in the right bucket even if the field is omitted.
+	 * Anything else lands in a stray bucket and renders as 'else', which the
+	 * test suite rejects.
+	 */
 	group?: string;
 	/** Set false to hide without deleting. */
 	visible: boolean;
@@ -25,45 +34,19 @@ export interface LinkItem {
 	featured?: boolean;
 }
 
-/** Display order, one entry per group heading. */
-export const GROUP_ORDER = ['elsewhere', 'writing', 'yours'] as const;
+/**
+ * Display order for the one and only section. The page deliberately has a
+ * single section; links render in the order they are declared.
+ */
+export const GROUP_ORDER = ['socials'] as const;
 
 export const LINKS: LinkItem[] = [
-	{
-		title: 'oem/log',
-		description: 'The dev blog: field notes, gotchas, and reusable tricks',
-		href: 'https://omiinaya.github.io/oem-log/',
-		icon: 'Terminal',
-		kind: 'internal',
-		group: 'elsewhere',
-		visible: true,
-		featured: true,
-	},
 	{
 		title: 'GitHub',
 		description: 'Code, experiments, and things we are building',
 		href: 'https://github.com/omiinaya',
 		icon: 'Code',
-		kind: 'external',
-		group: 'elsewhere',
-		visible: true,
-	},
-	{
-		title: 'MRXLAB',
-		description: 'Projects, research, and infrastructure',
-		href: 'https://mrxlab.net/',
-		icon: 'Globe',
-		kind: 'external',
-		group: 'elsewhere',
-		visible: true,
-	},
-	{
-		title: 'RSS Feed',
-		description: 'Stay up to date when new notes drop',
-		href: 'https://omiinaya.github.io/oem-log/rss.xml',
-		icon: 'Rss',
-		kind: 'external',
-		group: 'writing',
+		kind: 'profile',
 		visible: true,
 	},
 	{
@@ -71,9 +54,16 @@ export const LINKS: LinkItem[] = [
 		description: 'Short-form notes and build-in-progress',
 		href: 'https://infosec.exchange/@sullen',
 		icon: 'MessageCircle',
-		kind: 'external',
-		group: 'yours',
-		visible: false,
+		kind: 'profile',
+		visible: true,
+	},
+	{
+		title: 'Matrix',
+		description: 'Direct messages and the day-to-day channel',
+		href: 'https://matrix.to/#/%40sullen:matrix-server.mrxlab.local',
+		icon: 'Hash',
+		kind: 'profile',
+		visible: true,
 	},
 	{
 		title: 'Email',
@@ -81,7 +71,6 @@ export const LINKS: LinkItem[] = [
 		href: 'mailto:omar@mrxlab.net',
 		icon: 'Mail',
 		kind: 'email',
-		group: 'yours',
-		visible: false,
+		visible: true,
 	},
 ];

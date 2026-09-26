@@ -18,6 +18,7 @@ export const ICON_NAMES = [
 	'Flame',
 	'FolderGit2',
 	'Globe',
+	'Hash',
 	'KeyRound',
 	'Mail',
 	'MessageCircle',

@@ -4,6 +4,11 @@ A self-hosted link page, built in the same CLI-mono house style as
 [oem/log](https://omiinaya.github.io/oem-log/). Static Astro output, no
 tracking, no runtime.
 
+The page is deliberately **its own thing**: one flat list of socials under a
+single `socials` heading, and no reference anywhere to oem/log or any other
+site. It does not backlink to the blog through the header, the footer, the
+layout, or stray `<link>` tags. Adding one is a test failure (see **Tests**).
+
 ## Stack
 
 - **Astro 7** (`output: 'static'`), TypeScript strict
@@ -33,29 +38,35 @@ Everything on the page lives in **`src/data/links.ts`**. No component edits.
   description: 'One concrete line, not marketing',
   href: 'https://example.com/',
   icon: 'Globe',              // PascalCase name from src/lib/icon-names.ts
-  kind: 'external',           // 'internal' | 'external' | 'email'
-  group: 'elsewhere',         // a heading from GROUP_ORDER
+  kind: 'profile',            // 'profile' (new tab) | 'email' (mailto:)
   visible: true,              // false hides it without deleting
-  featured: true,             // optional, sorts to the top of its group
+  featured: true,             // optional, sorts to the top
 }
 ```
+
+There is one section, `socials`, so links need no `group` field. If you add
+one, it must be in `GROUP_ORDER` or the link renders under an `else` heading
+and the test suite fails.
 
 Rules the test suite enforces:
 
 - `title`, `description` and `href` are non-empty
-- `kind` is one of the three values above
+- `kind` is one of the two values above
 - `email` kind must use `mailto:`
 - every other `href` is absolute (`https://…`) or site-relative (`/…`)
 - `icon` is a known icon name
 - no duplicate titles
 - at least one link is visible
-- group headings are lowercase
+- exactly one section, and it is `socials`
+- **no oem-log / cross-site reference in the header, footer, BaseHead, layout
+  or page** — the page must not backlink to the blog
+- no `rel="sitemap"` or RSS `<link>`, since this site generates neither
 
-`kind` controls link attributes: `external` gets `rel="noopener"`,
-`internal` gets `rel="me"`, `email` gets neither and does not open a tab.
+`kind` controls link attributes: `profile` gets `rel="noopener"` and opens in
+a new tab, `email` gets neither and stays in the current tab.
 
-Links render in `GROUP_ORDER` sequence, then anything ungrouped under `else`.
-Hidden links keep their place, so toggling `visible` never reshuffles the page.
+Links render in declaration order, with `featured` first. Hidden links keep
+their place, so toggling `visible` never reshuffles the page.
 
 ## Adding an icon
 
@@ -71,17 +82,21 @@ blank slot rather than crashing the build, so rely on `npm test` to catch typos.
 
 ## Design system
 
-`src/styles/global.css`, `BaseHead.astro`, `Footer.astro`, `HeaderLink.astro`,
-the favicons, and the two Atkinson font files are **byte-identical copies** of
-the blog's versions. They are the house style; change them here and the blog
-does not follow, and vice versa. When the blog's design system changes, copy
-the files over again rather than hand-editing the divergence.
+`src/styles/global.css`, `BaseHead.astro`, `Footer.astro`, the favicons, and
+the two Atkinson font files started as **byte-identical copies** of the blog's
+versions. They are the house style; change them here and the blog does not
+follow, and vice versa. When the blog's design system changes, copy the files
+over again rather than hand-editing the divergence.
 
-`Header.astro` is the one component that intentionally diverges:
+Two components have since diverged on purpose, because this page is its own
+thing rather than a satellite of the blog:
 
-- the theme key is `oem-links-theme` (not the blog's `oem-log-theme`) so the
-  two sites keep separate light/dark preferences
-- the nav points at the blog's `notes`/`about` routes, not local ones
+- `Header.astro` has **no nav**. There is no second page to link to, so the
+  nav and its `internal-links` CSS were removed, along with `HeaderLink.astro`.
+  Its theme key is `oem-links-theme` (not the blog's `oem-log-theme`) so the
+  two sites keep separate light/dark preferences.
+- `BaseHead.astro` drops the blog's `rel="sitemap"` and RSS `<link>` tags.
+  They pointed at files this site never generates and both 404'd.
 
 In an Astro template, `//` outside a `<script>` renders as visible page text.
 Comments that are not inside a script or style block must be HTML comments.

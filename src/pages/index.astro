@@ -1,26 +1,30 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { AUTHOR_EMAIL, AUTHOR_HANDLE } from '../consts';
 import { GROUP_ORDER, LINKS, type LinkItem } from '../data/links';
 import { getIcon } from '../lib/icons';
 
 const visible = LINKS.filter((l) => l.visible);
 
-// Same links in the same order, bucketed by their group heading.
+// One section only. The page has a single list, so a link does not need a
+// group: anything without an explicit group belongs to 'socials'. Adding a
+// second section later is a data change (GROUP_ORDER), not a template change.
+const SECTION = GROUP_ORDER[0];
 const groups: { heading: string; items: LinkItem[] }[] = [];
 for (const heading of GROUP_ORDER) {
 	const items = visible
-		.filter((l) => l.group === heading)
+		.filter((l) => (l.group ?? SECTION) === heading)
 		.sort((a, b) => Number(b.featured ?? false) - Number(a.featured ?? false));
 	if (items.length > 0) groups.push({ heading, items });
 }
-// Anything not named in GROUP_ORDER still shows up, at the end.
-const stray = visible.filter((l) => !l.group || !(GROUP_ORDER as readonly string[]).includes(l.group));
+// Anything pointed at a heading that is not in GROUP_ORDER still shows up,
+// at the end. The test suite rejects this so it cannot silently become real.
+const known = new Set<string>(GROUP_ORDER);
+const stray = visible.filter((l) => l.group && !known.has(l.group));
 if (stray.length > 0) groups.push({ heading: 'else', items: stray });
 
 const count = visible.length;
 
-/** Short host label for the right-hand column, e.g. 'mrxlab.net'. */
+/** Short host label for the right-hand column, e.g. 'infosec.exchange'. */
 function hostOf(href: string): string {
 	if (href.startsWith('mailto:')) return '@';
 	try {
@@ -36,8 +40,7 @@ function hostOf(href: string): string {
 		<p class="kicker">one page to rule the links</p>
 		<h1 class="hero-title">$ oem/links</h1>
 		<p class="hero-desc">
-			Everything worth pointing at, in one place. Same CLI-mono house style as
-			the blog: no tracking, no runtime, nothing to sign up for.
+			Everywhere to find us. No tracking, no runtime, nothing to sign up for.
 		</p>
 	</section>
 
@@ -53,13 +56,14 @@ function hostOf(href: string): string {
 				<ul class="link-list">
 					{group.items.map((link) => {
 						const Icon = getIcon(link.icon);
+						const isEmail = link.kind === 'email';
 						return (
 							<li>
 								<a
 									class="link-row"
 									href={link.href}
-									target={link.kind === 'external' || link.kind === 'internal' ? '_blank' : undefined}
-									rel={link.kind === 'external' ? 'noopener' : link.kind === 'internal' ? 'me' : undefined}
+									target={isEmail ? undefined : '_blank'}
+									rel={isEmail ? undefined : 'noopener'}
 								>
 									<span class="link-idx" aria-hidden="true">
 										{String(visible.indexOf(link) + 1).padStart(2, '0')}
@@ -72,7 +76,7 @@ function hostOf(href: string): string {
 										<span class="link-desc">{link.description}</span>
 									</span>
 									<span class="link-host" aria-hidden="true">
-										{link.kind === 'email' ? '@' : hostOf(link.href)}
+										{isEmail ? '@' : hostOf(link.href)}
 									</span>
 									<span class="link-sym" aria-hidden="true">▸</span>
 								</a>
@@ -83,17 +87,6 @@ function hostOf(href: string): string {
 			</section>
 		))
 	}
-
-	<section class="foot">
-		<div class="foot-row">
-			<span class="foot-k">found a dead link, or something to add?</span>
-			<a class="foot-a" href={`mailto:${AUTHOR_EMAIL}`}>mail {AUTHOR_HANDLE} →</a>
-		</div>
-		<div class="foot-row">
-			<span class="foot-k">source</span>
-			<a class="foot-a" href="https://github.com/omiinaya" target="_blank" rel="me">github.com/omiinaya →</a>
-		</div>
-	</section>
 </Layout>
 
 <style>
@@ -211,33 +204,9 @@ function hostOf(href: string): string {
 	.link-row:hover .link-sym { color: var(--ink); }
 	.link-row:hover .link-host { color: var(--ink-dim); }
 
-	.foot {
-		margin-top: 3rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-	.foot-row {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		align-items: baseline;
-		column-gap: 1.5rem;
-		font-family: var(--font-mono);
-		font-size: 0.8rem;
-	}
-	.foot-k { color: var(--ink-faint); }
-	.foot-a {
-		color: var(--ink-dim);
-		text-decoration: none;
-		text-align: right;
-	}
-	.foot-a:hover { color: var(--ink); }
-
 	@media (max-width: 680px) {
 		.hero { padding: 1rem 0 1.8rem; }
 		.hero-title { font-size: 1.9rem; }
 		.link-desc, .link-host { display: none; }
-		.foot-row { grid-template-columns: 1fr; row-gap: 0.1rem; }
-		.foot-a { text-align: left; }
 	}
 </style>

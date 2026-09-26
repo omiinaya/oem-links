@@ -14,6 +14,11 @@ tracking, no runtime, no database. The entire content of the page is one file:
 
 ## Ground rules
 
+- **The page is its own thing.** One flat list of socials, one `socials`
+  heading, and no reference to oem/log anywhere: not in the header, footer,
+  layout, page, or `<link>` tags. A test enforces this. Do not add a nav, a
+  "read the blog" row, or a feed/sitemap link. The style is shared with the
+  blog; the content is not.
 - The design system files are byte-identical copies of the blog's. Do not
   "improve" them here in a way that drifts from the blog. If the blog's
   styling changes, re-copy the files.
@@ -26,7 +31,7 @@ tracking, no runtime, no database. The entire content of the page is one file:
 ## Before you commit
 
 ```bash
-npm test        # 8 content checks on the link data
+npm test        # 11 content checks on the link data
 npm run build   # static build; also asserts icon name/import agreement
 ```
 
@@ -42,7 +47,9 @@ check the output:
 ```bash
 npm run build
 grep -c 'class="link-row"' dist/index.html   # expect one per visible link
-grep -o 'class="link-title"[^>]*>[^<]*' dist/index.html
+grep -o 'class="link-title"' dist/index.html | wc -l
+grep -o 'list-head"[^>]*>[^<]*' dist/index.html   # expect: socials
+grep -c 'oem-log' dist/index.html            # expect 0, this page is self-contained
 ```
 
 Then look at it. `astro preview --port 4324` and open
@@ -50,10 +57,21 @@ Then look at it. `astro preview --port 4324` and open
 
 - **No source comments leaking into the page.** In an Astro template, `//`
   outside a `<script>` renders as visible text. This has bitten twice.
+- **Only one section, headed `socials`.** If it renders `else`, a link has a
+  `group` that is not in `GROUP_ORDER`, or the grouping fell through.
+- **Every anchor is either `/` or a listed social.** A stray blog URL means
+  a cross-reference crept back in; the test suite should have caught it.
 - Link row alignment: index, icon, title, description, hostname, arrow all on
   their shared columns.
 - The light theme actually toggles and survives a reload (it is restored by an
   inline script before first paint).
+
+## Why there is no nav
+
+`Header.astro` has no `internal-links` block, because there is no second page
+to link to. The `HeaderLink.astro` component and the nav's CSS were removed
+rather than left dormant. If a second page is ever genuinely needed, bring the
+nav back then, and re-check that none of its links point at the blog.
 
 ## Theme key
 
@@ -66,7 +84,7 @@ origin and would otherwise fight over one key.
 
 ```
 src/
-  components/    BaseHead, Footer, Header, HeaderLink   (style, mostly copied)
+  components/    BaseHead, Footer, Header          (style, mostly copied)
   data/links.ts  the entire content of the page
   layouts/       Layout.astro wrapper
   lib/           icon-names.ts (data) + icons.ts (resolver, build-checked)

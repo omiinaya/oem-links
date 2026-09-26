@@ -20,7 +20,7 @@ test('every link has a title, description, href and valid kind', () => {
 		assert.ok(link.description?.trim(), `blank description on ${link.title}`);
 		assert.ok(link.href?.trim(), `blank href on ${link.title}`);
 		assert.ok(
-			['internal', 'external', 'email'].includes(link.kind),
+			['profile', 'email'].includes(link.kind),
 			`bad kind "${link.kind}" on ${link.title}`,
 		);
 	}
@@ -81,9 +81,65 @@ test('GROUP_ORDER has no duplicates', () => {
 	);
 });
 
-test('group headings are lowercase so they render as-is', () => {
-	for (const group of GROUP_ORDER) {
-		assert.equal(group, group.toLowerCase(), `group heading "${group}" should be lowercase`);
-		assert.ok(!group.includes('/'), `group heading "${group}" should not contain a slash`);
+test('the page has exactly one section, and it is socials', () => {
+	assert.deepEqual(
+		[...GROUP_ORDER],
+		['socials'],
+		'the page is a single flat list of socials; it should have exactly one section',
+	);
+	const known = new Set<string>(GROUP_ORDER);
+	for (const link of LINKS) {
+		// A group that is not in GROUP_ORDER renders under an 'else' heading,
+		// which is the bug this caught: links were falling through to 'else'
+		// instead of 'socials' because they carried no group at all.
+		assert.ok(
+			link.group === undefined || known.has(link.group),
+			`${link.title} has group "${link.group}" which is not in GROUP_ORDER, `
+				+ 'so it would render under an "else" heading',
+		);
 	}
+});
+
+test('every visible link lands in the socials section, not a stray bucket', () => {
+	// Mirrors the grouping logic in src/pages/index.astro: an ungrouped link
+	// defaults into the single section, so nothing should ever be 'else'.
+	const SECTION = GROUP_ORDER[0];
+	for (const link of LINKS.filter((l) => l.visible)) {
+		const bucket = link.group ?? SECTION;
+		assert.equal(bucket, 'socials', `${link.title} would render under "${bucket}", not "socials"`);
+	}
+});
+
+test('the page is self-contained: no blog/cross-site references', async () => {
+	// The user asked for links to be its own thing: nothing on this page may
+	// point back at oem/log or any other site, apart from the listed links.
+	const srcDir = new URL('../src/', import.meta.url);
+	const offenders: string[] = [];
+	for (const rel of [
+		'components/Header.astro',
+		'components/Footer.astro',
+		'components/BaseHead.astro',
+		'layouts/Layout.astro',
+		'pages/index.astro',
+	]) {
+		const text = await readFile(new URL(rel, srcDir), 'utf8');
+		if (/oem-log|omiinaya\.github\.io/.test(text)) offenders.push(rel);
+	}
+	assert.deepEqual(
+		offenders,
+		[],
+		`these files still reference the blog: ${offenders.join(', ')}. `
+			+ 'This page must not link back to oem/log.',
+	);
+});
+
+test('the footer and header do not advertise a feed or sitemap', async () => {
+	// The blog's <link rel=sitemap> and RSS alternate pointed at files this
+	// site never generates. Keep them from coming back.
+	const baseHead = await readFile(
+		new URL('../src/components/BaseHead.astro', import.meta.url),
+		'utf8',
+	);
+	assert.ok(!/rel="sitemap"/.test(baseHead), 'do not advertise a sitemap this site does not generate');
+	assert.ok(!/application\/rss\+xml/.test(baseHead), 'do not advertise an RSS feed this site does not generate');
 });
