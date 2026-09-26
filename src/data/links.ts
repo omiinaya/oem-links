@@ -35,10 +35,11 @@ export interface LinkItem {
 }
 
 /**
- * Display order for the one and only section. The page deliberately has a
- * single section; links render in the order they are declared.
+ * Display order for the sections. The page has two: 'socials' for the public
+ * accounts, 'personal' for things that are yours rather than accounts you post
+ * on. Links render in the order they are declared, within their section.
  */
-export const GROUP_ORDER = ['socials'] as const;
+export const GROUP_ORDER = ['socials', 'personal'] as const;
 
 export const LINKS: LinkItem[] = [
 	{
@@ -58,14 +59,6 @@ export const LINKS: LinkItem[] = [
 		visible: true,
 	},
 	{
-		title: 'Blog',
-		description: 'Field notes, gotchas, and reusable tricks',
-		href: 'https://log.oem.ngo/',
-		icon: 'BookOpen',
-		kind: 'profile',
-		visible: true,
-	},
-	{
 		title: 'LinkedIn',
 		description: 'Professional profile and work history',
 		href: 'https://www.linkedin.com/in/omiinaya',
@@ -80,5 +73,14 @@ export const LINKS: LinkItem[] = [
 		icon: 'Mail',
 		kind: 'email',
 		visible: true,
+	},
+	{
+		title: 'Blog',
+		description: 'Field notes, gotchas, and reusable tricks',
+		href: 'https://log.oem.ngo/',
+		icon: 'BookOpen',
+		kind: 'profile',
+		visible: true,
+		group: 'personal',
 	},
 ];

@@ -95,11 +95,11 @@ test('GROUP_ORDER has no duplicates', () => {
 	);
 });
 
-test('the page has exactly one section, and it is socials', () => {
+test('the page has exactly the expected sections, in order', () => {
 	assert.deepEqual(
 		[...GROUP_ORDER],
-		['socials'],
-		'the page is a single flat list of socials; it should have exactly one section',
+		['socials', 'personal'],
+		'the page is a short socials list plus a personal section, in that order',
 	);
 	const known = new Set<string>(GROUP_ORDER);
 	for (const link of LINKS) {
@@ -114,13 +114,46 @@ test('the page has exactly one section, and it is socials', () => {
 	}
 });
 
-test('every visible link lands in the socials section, not a stray bucket', () => {
+test('every section renders at least one visible link', () => {
+	// An empty section renders a bare heading with nothing under it.
+	for (const group of GROUP_ORDER) {
+		const inGroup = LINKS.filter((l) => l.visible && (l.group ?? 'socials') === group);
+		assert.ok(
+			inGroup.length > 0,
+			`section "${group}" has no visible links, so it would render as a bare heading`,
+		);
+	}
+});
+
+test('personal links are explicitly grouped, and socials are not', () => {
+	// An ungrouped link silently joins socials, which is right for accounts
+	// and wrong for anything else. Anything personal must say so.
+	for (const link of LINKS.filter((l) => l.group === 'personal')) {
+		assert.ok(
+			link.title.length > 0 && link.href,
+			`personal link ${link.title} is incomplete`,
+		);
+	}
+	for (const link of LINKS.filter((l) => l.title === 'Blog')) {
+		assert.equal(
+			link.group,
+			'personal',
+			'the blog belongs in the personal section, not among the socials',
+		);
+	}
+});
+
+test('every visible link lands in a declared section, never a stray bucket', () => {
 	// Mirrors the grouping logic in src/pages/index.astro: an ungrouped link
-	// defaults into the single section, so nothing should ever be 'else'.
-	const SECTION = GROUP_ORDER[0];
+	// defaults into the first section, so nothing should ever be 'else'.
+	const DEFAULT = GROUP_ORDER[0];
+	const known = new Set<string>(GROUP_ORDER);
 	for (const link of LINKS.filter((l) => l.visible)) {
-		const bucket = link.group ?? SECTION;
-		assert.equal(bucket, 'socials', `${link.title} would render under "${bucket}", not "socials"`);
+		const bucket = link.group ?? DEFAULT;
+		assert.ok(
+			known.has(bucket),
+			`${link.title} would render under "${bucket}", which is not a declared section`,
+		);
 	}
 });
 

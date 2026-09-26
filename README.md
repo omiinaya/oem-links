@@ -8,12 +8,12 @@ Live: **[links.oem.ngo](https://links.oem.ngo/)** (public, MIT, deployed by
 GitHub Pages on every push to `main`). The `omiinaya.github.io/oem-links/` URL
 also resolves and serves the same build.
 
-The page is deliberately **its own thing**: one flat list under a single
-`socials` heading, and the chrome (header, footer, `<head>`, layout) never
-references oem/log or any other site. The blog appears only as a row in the
-list, because a link you chose to share is content, not a backlink. A stray
-`notes`/`about` nav entry or a `<link rel="sitemap">` pointing at the blog is a
-test failure (see **Tests**).
+The page is deliberately **its own thing**: a short `socials` list of accounts
+plus a `personal` section, and the chrome (header, footer, `<head>`, layout)
+never references oem/log or any other site. The blog appears only as a row in
+the `personal` section, because a link you chose to share is content, not a
+backlink. A stray `notes`/`about` nav entry or a `<link rel="sitemap">` pointing
+at the blog is a test failure (see **Tests**).
 
 ## Stack
 
@@ -50,9 +50,11 @@ Everything on the page lives in **`src/data/links.ts`**. No component edits.
 }
 ```
 
-There is one section, `socials`, so links need no `group` field. If you add
-one, it must be in `GROUP_ORDER` or the link renders under an `else` heading
-and the test suite fails.
+There are two sections, and a link without a `group` lands in the first one
+(`socials`). That default is right for accounts and wrong for anything else, so
+give anything personal `group: 'personal'`. Any group must be in `GROUP_ORDER`,
+or the link renders under an `else` heading and the test suite fails. Both
+sections must contain at least one visible link, or you get a bare heading.
 
 Rules the test suite enforces:
 
