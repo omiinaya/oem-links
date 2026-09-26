@@ -70,14 +70,25 @@ their place, so toggling `visible` never reshuffles the page.
 
 ## Adding an icon
 
-Two steps, in this order — the test and the build both check they agree:
+There are two kinds, and the test suite checks they agree with the data.
+
+**A Lucide icon** (the default) is two steps, in this order:
 
 1. Add the PascalCase name to `ICON_NAMES` in `src/lib/icon-names.ts`
-2. Import the component and add it to the map in `src/lib/icons.ts`
+2. Import the component and add it to the `ICONS` map in `src/lib/icons.ts`
 
-Find exact names at <https://lucide.dev/icons>. Note that Lucide dropped its
-brand icons, so there is no `Github`, `Youtube`, or `Globe2`; those rows use
-`Code`, `Play`, and `Globe`. An icon name that does not exist renders as a
+Find exact names at <https://lucide.dev/icons>.
+
+**A brand mark** (LinkedIn, X) is a `.astro` component in `src/lib/` exporting
+a default SVG that fills with `currentColor` and takes a `size` prop. Add it to
+`BRAND_ICONS` in `src/lib/icons.ts`. Brand names are deliberately **not** in
+`icon-names.ts`; the build throws if a name ends up in both.
+
+Lucide removed its brand icons upstream over trademark and consistency, so
+there is no `Github`, `Linkedin`, `Twitter` or `Youtube` to import. That is why
+the GitHub row uses generic `Code` brackets while LinkedIn and X get their real
+marks inlined from [Simple Icons](https://simpleicons.org) (CC0-1.0), the
+upstream source of those paths. An icon name that does not exist renders as a
 blank slot rather than crashing the build, so rely on `npm test` to catch typos.
 
 ## Design system

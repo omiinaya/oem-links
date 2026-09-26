@@ -31,7 +31,7 @@ tracking, no runtime, no database. The entire content of the page is one file:
 ## Before you commit
 
 ```bash
-npm test        # 11 content checks on the link data
+npm test        # 13 content checks on the link data
 npm run build   # static build; also asserts icon name/import agreement
 ```
 
@@ -87,7 +87,8 @@ src/
   components/    BaseHead, Footer, Header          (style, mostly copied)
   data/links.ts  the entire content of the page
   layouts/       Layout.astro wrapper
-  lib/           icon-names.ts (data) + icons.ts (resolver, build-checked)
+  lib/           icon-names.ts (Lucide data) + icons.ts (resolver, build-checked)
+                 LinkedIn.astro, XLogo.astro (brand marks, Simple Icons paths)
   pages/         index.astro
   styles/        global.css (byte-identical to the blog's)
 tests/           node:test content checks

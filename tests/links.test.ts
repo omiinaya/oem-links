@@ -41,12 +41,26 @@ test('hrefs are absolute or site-relative, and email links use mailto:', () => {
 	}
 });
 
-test('every icon name used in the data is a known icon', () => {
+test('every icon name used in the data is a known icon', async () => {
+	// Brand marks (LinkedIn, X) are .astro components in src/lib/, not Lucide
+	// names, and they cannot be imported here for the same node_modules reason
+	// as @lucide/astro. Derive their names from the filename instead.
 	const known = new Set<string>(ICON_NAMES);
+	for (const [file, name] of [
+		['LinkedIn.astro', 'LinkedIn'],
+		['XLogo.astro', 'X'],
+	] as const) {
+		try {
+			await readFile(new URL(`../src/lib/${file}`, import.meta.url), 'utf8');
+			known.add(name);
+		} catch {
+			// Brand mark not present; only a problem if the data uses it.
+		}
+	}
 	for (const link of LINKS) {
 		assert.ok(
 			known.has(link.icon),
-			`icon "${link.icon}" on ${link.title} is not in src/lib/icon-names.ts (have: ${ICON_NAMES.join(', ')})`,
+			`icon "${link.icon}" on ${link.title} is not known (have: ${[...known].join(', ')})`,
 		);
 	}
 });
@@ -107,6 +121,41 @@ test('every visible link lands in the socials section, not a stray bucket', () =
 	for (const link of LINKS.filter((l) => l.visible)) {
 		const bucket = link.group ?? SECTION;
 		assert.equal(bucket, 'socials', `${link.title} would render under "${bucket}", not "socials"`);
+	}
+});
+
+test('no placeholder or unfinished hrefs', () => {
+	// A guessed social URL is worse than no row at all: it renders fine and
+	// silently points at a stranger. Placeholders must never reach the page.
+	const placeholder = /REPLACE_ME|TODO|CHANGEME|example\.(com|org)|your-?handle|\bxxx\b/i;
+	for (const link of LINKS) {
+		assert.ok(
+			!placeholder.test(link.href),
+			`${link.title} has a placeholder href "${link.href}"; `
+				+ 'either paste the real URL or set visible: false until you have it',
+		);
+	}
+});
+
+test('visible social links point at the expected platforms', () => {
+	// Guards against a copy/paste swapping one platform's URL for another's.
+	const platform = (href: string): string | null => {
+		if (href.includes('github.com')) return 'github';
+		if (href.includes('linkedin.com')) return 'linkedin';
+		if (href.includes('x.com') || href.includes('twitter.com')) return 'x';
+		return null;
+	};
+	const pairs: Record<string, string> = {
+		GitHub: 'github',
+		LinkedIn: 'linkedin',
+		X: 'x',
+	};
+	for (const link of LINKS.filter((l) => l.visible && pairs[l.title])) {
+		assert.equal(
+			platform(link.href),
+			pairs[link.title],
+			`${link.title} points at ${link.href}, which is a different platform`,
+		);
 	}
 });
 
