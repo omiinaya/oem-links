@@ -9,9 +9,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 - GitHub Pages deployment (`.github/workflows/deploy.yml`), publishing to
-  <https://omiinaya.github.io/oem-links/> on every push to `main`. Runs on the
-  self-hosted CT103 runner, not GitHub-hosted, because the account's Actions
-  minute budget blocks hosted jobs before they start.
+  <https://omiinaya.github.io/oem-links/> on every push to `main`. Runs on a
+  self-hosted runner, not GitHub-hosted, because the account's Actions minute
+  budget blocks hosted jobs before they start.
 - `LICENSE` (MIT), with the bundled third-party licences called out: the
   Atkinson fonts (SIL OFL 1.1) and the brand marks (Simple Icons, CC0-1.0).
 - An "everything to find me" copy pass: the page is a personal page, so hero,

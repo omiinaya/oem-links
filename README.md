@@ -146,7 +146,7 @@ a build-time assertion in `icons.ts` itself.
 
 Output is a plain static `dist/`. Any static host works.
 
-### Self-hosting on a box (worked example, verified on the PVE host)
+### Self-hosting on a box (worked example, verified on a Proxmox host)
 
 ```bash
 ./scripts/setup.sh                  # build, install the unit, bind 0.0.0.0:8080
