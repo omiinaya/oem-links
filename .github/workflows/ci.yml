@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# No secrets needed and no deploy step: this repo is private and the site is
+# self-hosted, so CI only has to prove the build and the content checks pass.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Content checks
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Sanity-check the build output
+        run: test -f dist/index.html && grep -q 'class="link-row"' dist/index.html
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist/
+          retention-days: 7
