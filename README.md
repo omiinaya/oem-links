@@ -107,6 +107,24 @@ a build-time assertion in `icons.ts` itself.
 
 ## Deploying
 
-Output is a plain static `dist/`. Any static host works. For a
-self-hosted box, serve `dist/` from a unit and point a reverse proxy at it;
-see `AGENTS.md` for a worked example.
+Output is a plain static `dist/`. Any static host works.
+
+### Self-hosting on a box (worked example, verified on the PVE host)
+
+```bash
+./scripts/setup.sh                  # build, install the unit, bind 0.0.0.0:8080
+PORT=8090 ./scripts/setup.sh        # different port
+```
+
+`setup.sh` is idempotent: re-running it rebuilds, rewrites the unit, and
+`systemctl enable --now` leaves a healthy service untouched. It installs
+`oem-links.service` (system scope), which runs `scripts/serve.py` as `nobody`
+out of the repo's `dist/`.
+
+Run it from the **real** path (`/mnt/pve/mrx-thunder/projects/links`), not the
+`/root/projects/links` symlink: the unit sets `ProtectHome=true`, so a
+`WorkingDirectory` under `/root` is unreadable and the service dies on start.
+
+`scripts/serve.py` is a dependency-free static server on purpose. It replaces
+the `npx --yes serve` this used to run, which meant an unpinned package
+download from the npm registry on every service start.

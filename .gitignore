@@ -28,6 +28,8 @@ sketches/
 
 # scratch
 *.local
+__pycache__/
+*.pyc
 
 # self-referential SAME-PATH symlink (local dev convenience, not part of the repo)
 /links
