@@ -36,7 +36,7 @@ function hostOf(href: string): string {
 
 <Layout title="oem/links">
 	<section class="hero">
-		<p class="kicker">one page to rule the links</p>
+		<p class="cm-kicker">one page to rule the links</p>
 		<h1 class="hero-title">$ oem/links</h1>
 		<p class="hero-desc">
 			Everywhere to find me. No tracking, no runtime, nothing to sign up for.
@@ -207,5 +207,29 @@ function hostOf(href: string): string {
 		.hero { padding: 1rem 0 1.8rem; }
 		.hero-title { font-size: 1.9rem; }
 		.link-desc, .link-host { display: none; }
+	}
+
+	/* ---- phone type floor ----
+	   cli-mono floors its own components at --min-font on a coarse
+	   pointer. These four are declared here, in Astro's scoped block,
+	   so they never see that rule and rendered at 10.56-11.52px on a
+	   phone. The floor has to live beside the declarations it
+	   overrides: Astro rewrites the descendant rules below to
+	   `.status[data-astro-cid-x] .lbl[data-astro-cid-x]` at (0,4,0),
+	   and nothing readable from an imported stylesheet can match that
+	   without a contrived selector. Keep the next rule last so it wins
+	   the tie. */
+	@media (pointer: coarse) {
+		.status,
+		.status .lbl,
+		.status .val,
+		.status .ok,
+		.status .bar,
+		.list-head,
+		.link-host,
+		.link-idx,
+		.link-desc {
+			font-size: max(var(--min-font), 0.66rem);
+		}
 	}
 </style>

@@ -53,4 +53,17 @@ const today = new Date();
 	.ok { color: var(--ink-dim); margin-right: 0.35em; }
 	.ok + span { margin-right: 1.2em; }
 	.bar { color: var(--ink-faint); margin-right: 1.2em; }
+
+	/* Phone type floor. cli-mono's floor covers its own components;
+	   this is a local scoped block, so .ok and .bar inherit 0.72rem
+	   from .footer-status and rendered at 11.52px. Flooring the
+	   container is enough — the children have no font-size of their
+	   own. Declared here for the same reason as index.astro: Astro
+	   rewrites scoped rules to (0,2,0)+ and a floor written in an
+	   imported sheet cannot match it. */
+	@media (pointer: coarse) {
+		.footer-status {
+			font-size: max(var(--min-font), 0.72rem);
+		}
+	}
 </style>

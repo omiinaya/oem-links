@@ -1,0 +1,49 @@
+/* ============================================================
+   oem/links — site overrides on top of cli-mono
+   ------------------------------------------------------------
+   The design system is NOT defined here. It is cli-mono, installed
+   from /root/projects/cli-mono (scripts/install.sh) and loaded
+   first, in order: tokens → base → components. This file is loaded
+   LAST, so anything here wins on equal specificity.
+
+   Keep this file small. If a rule is about look-and-feel rather than
+   this site's own content, it belongs in cli-mono, not here — that
+   is the whole point of the split. To pull a cli-mono update back
+   in, re-run the installer; nothing in this file needs re-doing
+   unless it deliberately overrides.
+
+   Historical note: this file replaced a 255-line global.css that
+   re-declared the entire design system — tokens, base elements and
+   three component classes — copied from the dev blog and left to
+   drift. That drift is why this site's secondary text sat at 2.66:1
+   contrast while the blog's did not. The token values now live in
+   cli-mono and the contrast test there covers them.
+   ============================================================ */
+
+/* ---- layout override --------------------------------------
+   The blog is prose and runs 860px. This is a single column of
+   link rows, which reads better narrower, so the content width
+   stays local rather than bending the shared token. */
+:root {
+	--maxw: 680px;
+}
+
+/* ---- phone type floor -------------------------------------
+   cli-mono floors its OWN components at --min-font on a coarse
+   pointer, but these classes are declared in index.astro's scoped
+   <style>, so they never see that rule and rendered at
+   10.56–11.52px on a phone.
+
+   The floor lives in index.astro instead, beside the font sizes it
+   overrides. Two rules of CSS made it unwinnable from here: the
+   scoped block groups these as descendant rules (`.status .lbl`),
+   which Astro rewrites to `.status[data-astro-cid-x] .lbl[data-astro-cid-x]`
+   at (0,4,0), and that block lands later in the bundle. Matching
+   (0,4,0) from an imported sheet needed a contrived two-class
+   selector that also required tagging the markup. Declaring the
+   floor next to the declaration is the fix that needs no tricks. */
+
+/* ---- the one class that was site-specific enough to keep ---
+   `.kicker` is the eyebrow label above the hero. cli-mono owns
+   this as `.cm-kicker`, so use that name instead of shadowing it.
+   Marked in index.astro as cm-kicker. */
