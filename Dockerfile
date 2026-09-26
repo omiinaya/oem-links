@@ -21,7 +21,10 @@ WORKDIR /app
 # Static files plus the server script only.
 COPY --from=build /app/dist /app/dist
 COPY scripts/serve.py /app/scripts/serve.py
-EXPOSE 4321
+# Serve on 80, not 4321: Coolify's Traefik labels the backend port from the
+# app's exposed port, which defaults to 80 and is not writable via the API.
+# Listening on anything else yields a 502 from the proxy.
+EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
-  CMD python3 -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:4321/').read()" || exit 1
-CMD ["python3", "/app/scripts/serve.py", "--bind", "0.0.0.0", "--port", "4321", "--root", "/app/dist"]
+  CMD python3 -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:80/').read()" || exit 1
+CMD ["python3", "/app/scripts/serve.py", "--bind", "0.0.0.0", "--port", "80", "--root", "/app/dist"]
