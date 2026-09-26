@@ -4,8 +4,8 @@ A self-hosted link page, built in the same CLI-mono house style as
 [oem/log](https://omiinaya.github.io/oem-log/). Static Astro output, no
 tracking, no runtime.
 
-Live: **[omiinaya.github.io/oem-links](https://omiinaya.github.io/oem-links/)**
-(public, deployed by GitHub Pages on every push to `main`).
+Live: **[links.oem.ngo](https://links.oem.ngo/)** (public, MIT, deployed by
+GitHub Pages on every push to `main`).
 
 The page is deliberately **its own thing**: one flat list of socials under a
 single `socials` heading, and no reference anywhere to oem/log or any other
@@ -117,20 +117,21 @@ Comments that are not inside a script or style block must be HTML comments.
 
 ## Environment variables
 
-Both are optional and read in `astro.config.mjs`. The defaults target GitHub
-Pages, which is the canonical deployment:
+Both are optional and read in `astro.config.mjs`. The defaults target the
+custom domain, which is the canonical deployment:
 
 | Variable | Default | Use |
 | --- | --- | --- |
-| `SITE_URL` | `https://omiinaya.github.io` | canonical/OG origin |
-| `SITE_BASE` | `/oem-links/` | path prefix; **must** match the Pages repo name |
+| `SITE_URL` | `https://links.oem.ngo` | canonical/OG origin |
+| `SITE_BASE` | `/` | path prefix; leave `/` for a domain root |
 
-A project Pages site is served from `https://<user>.github.io/<repo>/`, so a
-wrong `SITE_BASE` still builds cleanly and then 404s every asset in production.
-CI asserts the prefix is present in the built HTML to catch exactly that.
+The canonical host is a real hostname served from its own root, so `base` is
+`/` and no path prefix is involved. A wrong `SITE_BASE` still builds cleanly
+and then 404s every asset in production, so CI asserts the output is
+root-relative.
 
-`scripts/setup.sh` overrides both when it builds for the self-hosted service
-(`SITE_BASE=/`), so the LAN copy keeps serving from a domain root.
+`scripts/setup.sh` passes `SITE_BASE=/` and a local `SITE_URL` when it builds
+for the self-hosted LAN service.
 
 ## Tests
 

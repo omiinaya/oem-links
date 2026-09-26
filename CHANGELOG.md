@@ -8,10 +8,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
-- GitHub Pages deployment (`.github/workflows/deploy.yml`), publishing to
-  <https://omiinaya.github.io/oem-links/> on every push to `main`. Runs on a
-  self-hosted runner, not GitHub-hosted, because the account's Actions minute
-  budget blocks hosted jobs before they start.
+- GitHub Pages deployment (`.github/workflows/deploy.yml`), publishing on
+  every push to `main`. Runs on a self-hosted runner, not GitHub-hosted,
+  because the account's Actions minute budget blocks hosted jobs before they
+  start.
+- Custom domain **[links.oem.ngo](https://links.oem.ngo/)**, on the Cloudflare
+  zone `oem.ngo` as a proxied CNAME to `omiinaya.github.io`, with the CNAME
+  registered on the Pages site.
 - `LICENSE` (MIT), with the bundled third-party licences called out: the
   Atkinson fonts (SIL OFL 1.1) and the brand marks (Simple Icons, CC0-1.0).
 - An "everything to find me" copy pass: the page is a personal page, so hero,
@@ -24,10 +27,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 - **The repository is now public.**
-- `SITE_URL` and `SITE_BASE` now default to the Pages deployment
-  (`https://omiinaya.github.io` and `/oem-links/`) instead of a private LAN
-  hostname. Both stay overridable, and `setup.sh` builds the self-hosted copy
-  with `SITE_BASE=/` so it keeps serving from a domain root.
+- `SITE_URL` and `SITE_BASE` now default to the canonical deployment
+  (`https://links.oem.ngo` and `/`) instead of a private LAN hostname. Both stay
+  overridable, and `setup.sh` builds the self-hosted copy with `SITE_BASE=/`
+  and a local `SITE_URL` so it keeps serving from a domain root.
+- Social order is now X, GitHub, LinkedIn, email.
 - README no longer names the internal project path; it states the symlink rule
   instead.
 - The page is now its own thing. Removed every cross-reference to oem/log:

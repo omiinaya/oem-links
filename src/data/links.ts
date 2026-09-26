@@ -42,6 +42,14 @@ export const GROUP_ORDER = ['socials'] as const;
 
 export const LINKS: LinkItem[] = [
 	{
+		title: 'X',
+		description: 'Short-form posts and threads',
+		href: 'https://x.com/omiinaya',
+		icon: 'X',
+		kind: 'profile',
+		visible: true,
+	},
+	{
 		title: 'GitHub',
 		description: 'Code, experiments, and things I am building',
 		href: 'https://github.com/omiinaya',
@@ -54,14 +62,6 @@ export const LINKS: LinkItem[] = [
 		description: 'Professional profile and work history',
 		href: 'https://www.linkedin.com/in/omiinaya',
 		icon: 'LinkedIn',
-		kind: 'profile',
-		visible: true,
-	},
-	{
-		title: 'X',
-		description: 'Short-form posts and threads',
-		href: 'https://x.com/omiinaya',
-		icon: 'X',
 		kind: 'profile',
 		visible: true,
 	},

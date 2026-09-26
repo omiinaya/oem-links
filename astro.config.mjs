@@ -4,16 +4,16 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 //
-// Defaults target GitHub Pages, which is the canonical deployment. A project
-// Pages site is served from https://<user>.github.io/<repo>/, so `base` MUST
-// match the repo name or every asset and internal link 404s.
+// Defaults target the canonical deployment, the custom domain
+// https://links.oem.ngo. Because that is a real hostname served from its own
+// root, `base` is "/" and no path prefix is involved.
 //
-// Both values stay overridable so the site can still be self-hosted from a
-// subpath: setup.sh builds with SITE_BASE=/ so the LAN service keeps serving
-// at the root.
+// Both values stay overridable: setup.sh passes SITE_BASE=/ explicitly for the
+// self-hosted LAN service, and SITE_BASE can be set to "/<subpath>/" to host
+// the site under a subdirectory of some other domain.
 export default defineConfig({
-	site: process.env.SITE_URL ?? 'https://omiinaya.github.io',
-	base: process.env.SITE_BASE ?? '/oem-links/',
+	site: process.env.SITE_URL ?? 'https://links.oem.ngo',
+	base: process.env.SITE_BASE ?? '/',
 	output: 'static',
 	integrations: [],
 	fonts: [

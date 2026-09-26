@@ -36,12 +36,14 @@ jobs:
         run: npm test
 
       - name: Build
-        # SITE_BASE is intentionally NOT set: the default in astro.config.mjs
-        # is the /oem-links/ prefix this project Pages site needs.
+        # No SITE_BASE override: the canonical build targets the custom domain,
+        # which is served from its own root.
         run: npm run build
 
-      - name: Assert the Pages base prefix
-        run: grep -q 'href="/oem-links/_astro/' dist/index.html
+      - name: Assert the build serves from the domain root
+        run: |
+          grep -q 'href="/_astro/' dist/index.html
+          ! grep -q 'oem-links/_astro' dist/index.html
 
       - uses: actions/configure-pages@v5
 
