@@ -227,3 +227,46 @@ test('the footer and header do not advertise a feed or sitemap', async () => {
 	assert.ok(!/rel="sitemap"/.test(baseHead), 'do not advertise a sitemap this site does not generate');
 	assert.ok(!/application\/rss\+xml/.test(baseHead), 'do not advertise an RSS feed this site does not generate');
 });
+
+test('no scoped-style selector targets a class the markup does not use', async () => {
+	// A class renamed during the oem-ui migration left `.hero .kicker` styling
+	// an element that is now `.cm-kicker`. The rule shipped, matched nothing,
+	// and the 1rem gap silently became 0. Nothing failed: the page still built
+	// and rendered, just tighter than designed. This catches that shape of
+	// dead CSS, which a build and a visual pass both happily accept.
+	//
+	// Not every selector must match: a style block may legitimately be inert
+	// for a breakpoint, and project classes can live in another component. So
+	// this checks the *page's own* markup against *its own* scoped style, and
+	// reports orphans rather than asserting an empty list forever.
+	const page = await readFile(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+
+	const declared = new Set<string>();
+	for (const sel of page.slice(page.lastIndexOf('<style>')).matchAll(
+		/([.#][\w-]+(?:\s*[,>+~]\s*[.#][\w-]+)*)\s*\{/g,
+	)) {
+		for (const part of sel[1]!.split(/[,>+~]/)) {
+			const t = part.trim();
+			if (t.startsWith('.') || t.startsWith('#')) declared.add(t.slice(1));
+		}
+	}
+
+	const used = new Set<string>();
+	for (const cls of page.matchAll(/class="([^"]+)"/g)) {
+		for (const c of cls[1]!.split(/\s+/)) if (c) used.add(c);
+	}
+
+	// `.bar` lives in Footer.astro; the page's style does not own it.
+	const ownedElsewhere = new Set(['bar']);
+	const orphans = [...declared]
+		.filter((c) => !used.has(c) && !ownedElsewhere.has(c))
+		.sort();
+
+	assert.deepEqual(
+		orphans,
+		[],
+		`selectors in index.astro's scoped style match no element in that file: `
+			+ `${orphans.join(', ')}. A class was probably renamed without its `
+			+ 'selector, so the rule is dead CSS and the spacing it controlled is gone.',
+	);
+});

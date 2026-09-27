@@ -90,7 +90,10 @@ function hostOf(href: string): string {
 
 <style>
 	.hero { padding: 0.5rem 0 2.2rem; }
-	.hero .kicker { margin-bottom: 1rem; }
+	/* The element carries the library's .cm-kicker, not a bare .kicker. This
+	   selector was not renamed during the oem-ui migration, so the 1rem gap
+	   silently became 0 and the eyebrow welded itself to the title. */
+	.hero .cm-kicker { margin-bottom: 1rem; }
 	.hero-title {
 		font-size: 2.2rem;
 		letter-spacing: -0.01em;
