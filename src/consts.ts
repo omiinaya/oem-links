@@ -11,3 +11,8 @@ export const AUTHOR_GITHUB = 'https://github.com/omiinaya';
 // Theme persistence key. Distinct from the blog's so the two sites
 // don't fight over one preference.
 export const THEME_KEY = 'oem-links-theme';
+
+// Theme keys this site used before the oem-ui runtime owned the toggle.
+// A returning visitor's saved preference lives under one of these, so the
+// runtime reads it and folds it into THEME_KEY on first load.
+export const LEGACY_THEME_KEYS = ['cm-theme'];

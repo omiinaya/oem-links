@@ -331,3 +331,63 @@ test('the page uses library components, not parallel implementations', async () 
 		);
 	}
 });
+
+test('the page does not carry its own theme runtime', async () => {
+	// oem-links used to ship ~40 lines of inline theme script, byte-identical
+	// to the blog's copy, differing only in the storage key. The library
+	// runtime owns the theme now, and the project only declares its key.
+	const header = await readFile(
+		new URL('../src/components/Header.astro', import.meta.url),
+		'utf8',
+	);
+	assert.ok(
+		!/<script/.test(header),
+		'Header.astro must not contain a script: the oem-ui runtime owns the theme toggle',
+	);
+	assert.ok(
+		!header.includes('localStorage'),
+		'Header.astro must not touch localStorage; that is the runtime\'s job',
+	);
+});
+
+test('the layout declares the project theme key and loads the runtime', async () => {
+	const layout = await readFile(
+		new URL('../src/layouts/Layout.astro', import.meta.url),
+		'utf8',
+	);
+	assert.match(
+		layout,
+		/data-cm-theme-key="oem-links-theme"/,
+		'<html> must declare this project\'s storage key',
+	);
+	assert.match(
+		layout,
+		/data-cm-theme-legacy="cm-theme"/,
+		'and the keys it used before, so a returning visitor keeps their theme',
+	);
+	assert.match(
+		layout,
+		/import\s+['"]\.\.\/js\/cli-mono\.js['"]/,
+		'the runtime must be imported so it is bundled; a raw src is emitted verbatim and never ships',
+	);
+});
+
+test('the FOUC guard is the first node in head and carries the project key', async () => {
+	const head = await readFile(
+		new URL('../src/components/BaseHead.astro', import.meta.url),
+		'utf8',
+	);
+	assert.ok(
+		head.indexOf('set:html={cmThemeGuard}') !== -1,
+		'BaseHead must emit the guard',
+	);
+	assert.ok(
+		head.indexOf('set:html={cmThemeGuard}') < head.indexOf('<meta charset'),
+		'the guard must precede <meta charset>, or a light-theme visitor sees a dark flash',
+	);
+	assert.match(
+		head,
+		/themeInitSnippet\(THEME_KEY, LEGACY_THEME_KEYS\)/,
+		'the guard must be generated for this project\'s key, including legacy keys',
+	);
+});

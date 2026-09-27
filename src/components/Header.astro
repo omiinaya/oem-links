@@ -1,19 +1,6 @@
 ---
-import { SITE_TITLE, AUTHOR_HANDLE, THEME_KEY } from '../consts';
+import { SITE_TITLE, AUTHOR_HANDLE } from '../consts';
 ---
-
-<!-- prevent flash-of-wrong-theme: apply saved light theme before paint.
-     THEME_KEY is injected at build time so this stays a plain inline script.
-     Note: in an Astro template, `//` outside a <script> renders as visible text,
-     so this has to be an HTML comment. -->
-<script is:inline define:vars={{ THEME_KEY }}>
-	const saved = (() => {
-		try { return localStorage.getItem(THEME_KEY); } catch { return null; }
-	})();
-	if (saved === 'light') {
-		document.documentElement.setAttribute('data-theme', 'light');
-	}
-</script>
 
 <header>
 	<nav>
@@ -26,8 +13,14 @@ import { SITE_TITLE, AUTHOR_HANDLE, THEME_KEY } from '../consts';
 		<!-- No nav: this page is a single self-contained list of links, so
 		     there is nowhere else on-site to link to. -->
 		<div class="controls">
-			<button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
-				<span class="icon" aria-hidden="true"></span>
+			<button
+			class="theme-toggle"
+			type="button"
+			data-cm-theme-toggle
+			aria-label="Toggle theme"
+			title="Toggle theme"
+		>
+				<span class="icon" data-cm-theme-icon aria-hidden="true"></span>
 			</button>
 			<a href={`https://github.com/${AUTHOR_HANDLE}`} rel="me" aria-label="GitHub">
 				<span class="cm-sr-only">GitHub</span>
@@ -38,28 +31,6 @@ import { SITE_TITLE, AUTHOR_HANDLE, THEME_KEY } from '../consts';
 		</div>
 	</nav>
 </header>
-
-<script define:vars={{ THEME_KEY }}>
-	const toggle = document.querySelector('.theme-toggle');
-	const icon = toggle && toggle.querySelector('.icon');
-	function apply(theme) {
-		document.documentElement.setAttribute('data-theme', theme);
-		try { localStorage.setItem(THEME_KEY, theme); } catch {}
-	}
-	function paint() {
-		if (!icon) return;
-		const light = document.documentElement.getAttribute('data-theme') === 'light';
-		icon.textContent = light ? '☾' : '☀';
-	}
-	if (toggle) {
-		toggle.addEventListener('click', () => {
-			const current = document.documentElement.getAttribute('data-theme');
-			apply(current === 'light' ? 'dark' : 'light');
-			paint();
-		});
-	}
-	paint();
-</script>
 
 <style>
 	header {

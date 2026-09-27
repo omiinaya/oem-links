@@ -13,9 +13,19 @@ const { title = SITE_TITLE, description = SITE_DESCRIPTION } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html
+	lang="en"
+	data-cm-theme-key="oem-links-theme"
+	data-cm-theme-legacy="cm-theme"
+>
 	<head>
 		<BaseHead title={title} description={description} />
+		<!-- The theme preference lives under this project's own key (on <html>
+		     above) and the library's runtime owns the toggle. Imported so Vite
+		     bundles it: a raw src path is emitted verbatim and never shipped. -->
+		<script>
+			import '../js/cli-mono.js';
+		</script>
 	</head>
 	<body>
 		<Header />
