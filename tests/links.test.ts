@@ -228,21 +228,29 @@ test('the footer and header do not advertise a feed or sitemap', async () => {
 	assert.ok(!/application\/rss\+xml/.test(baseHead), 'do not advertise an RSS feed this site does not generate');
 });
 
-test('no scoped-style selector targets a class the markup does not use', async () => {
-	// A class renamed during the oem-ui migration left `.hero .kicker` styling
-	// an element that is now `.cm-kicker`. The rule shipped, matched nothing,
-	// and the 1rem gap silently became 0. Nothing failed: the page still built
-	// and rendered, just tighter than designed. This catches that shape of
-	// dead CSS, which a build and a visual pass both happily accept.
+test('every class the page styles is in its markup, and vice versa', async () => {
+	// A class renamed during the oem-ui migration left `.hero .kicker`
+	// styling an element that had become `.cm-kicker`. The rule shipped,
+	// matched nothing, and the 1rem gap silently became 0. Nothing failed:
+	// the page still built and rendered, just tighter than designed. Both
+	// a build and a visual pass accept that, which is why it needs a test.
 	//
-	// Not every selector must match: a style block may legitimately be inert
-	// for a breakpoint, and project classes can live in another component. So
-	// this checks the *page's own* markup against *its own* scoped style, and
-	// reports orphans rather than asserting an empty list forever.
+	// The check is bidirectional because the bug has two directions and
+	// only one of them is visible from a single side:
+	//
+	//   selector -> no markup   dead CSS, the rule does nothing
+	//   markup   -> no selector the element renders unstyled, which is
+	//                          the direction that actually bit us
+	//
+	// Not every class needs both: the library's own .cm-* classes are
+	// styled by the imported sheet, not by this file, and `.bar` lives in
+	// Footer.astro. Those are declared here explicitly rather than ignored
+	// by prefix, so a genuinely orphaned selector still fails.
 	const page = await readFile(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+	const styleBlock = page.slice(page.lastIndexOf('<style>'));
 
 	const declared = new Set<string>();
-	for (const sel of page.slice(page.lastIndexOf('<style>')).matchAll(
+	for (const sel of styleBlock.matchAll(
 		/([.#][\w-]+(?:\s*[,>+~]\s*[.#][\w-]+)*)\s*\{/g,
 	)) {
 		for (const part of sel[1]!.split(/[,>+~]/)) {
@@ -256,10 +264,19 @@ test('no scoped-style selector targets a class the markup does not use', async (
 		for (const c of cls[1]!.split(/\s+/)) if (c) used.add(c);
 	}
 
-	// `.bar` lives in Footer.astro; the page's style does not own it.
-	const ownedElsewhere = new Set(['bar']);
+	// Classes this file's scoped style is allowed to mention without
+	// owning: the shared library's surface, and one class in Footer.astro.
+	const ownedElsewhere = new Set(['bar', 'head', 'kicker', 'status', 'status__label', 'status__value']);
+
+	// Style block references a class this page never renders: dead CSS.
 	const orphans = [...declared]
 		.filter((c) => !used.has(c) && !ownedElsewhere.has(c))
+		.sort();
+
+	// Page renders a project class its own style block never mentions.
+	// Library (.cm-*) classes are styled by the imported sheet instead.
+	const unstyled = [...used]
+		.filter((c) => !declared.has(c) && !c.startsWith('cm-'))
 		.sort();
 
 	assert.deepEqual(
@@ -269,4 +286,48 @@ test('no scoped-style selector targets a class the markup does not use', async (
 			+ `${orphans.join(', ')}. A class was probably renamed without its `
 			+ 'selector, so the rule is dead CSS and the spacing it controlled is gone.',
 	);
+	assert.deepEqual(
+		unstyled,
+		[],
+		`index.astro renders these project classes but never styles them: `
+			+ `${unstyled.join(', ')}. Either the selector was left behind under `
+			+ 'an old name, or the class does nothing.',
+	);
+});
+
+test('the page uses library components, not parallel implementations', async () => {
+	// oem-links used to carry 18 project classes that were near-identical to
+	// library components: .hero, .status, .link-row, .link-idx, .link-title
+	// and so on. Every one of them was a second implementation of something
+	// the design system already owned, so a fix to the library never
+	// reached the page. Assert the shared surface is actually used, so the
+	// two cannot drift apart again.
+	const page = await readFile(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+
+	for (const cls of [
+		'cm-head', 'cm-kicker', 'cm-head__sub',
+		'cm-status', 'cm-status__label', 'cm-status__value',
+		'cm-list-head', 'cm-rows', 'cm-row', 'cm-row__idx', 'cm-row__icon',
+		'cm-row__body', 'cm-row__title', 'cm-row__desc', 'cm-row__meta', 'cm-row__sym',
+	]) {
+		assert.ok(
+			new RegExp(`class="[^"]*\\b${cls}\\b`).test(page),
+			`index.astro should use the library's .${cls}`,
+		);
+	}
+
+	// The superseded project classes must not creep back.
+	for (const old of [
+		'hero', 'hero-title', 'hero-desc', 'status', 'lbl', 'val',
+		'list-head', 'link-list', 'link-row', 'link-idx', 'link-icon',
+		'link-body', 'link-title', 'link-desc', 'link-host', 'link-sym',
+	]) {
+		const inAClass = new RegExp(
+			`class="[^"]*(?:^|\\s)${old}(?:\\s|")`,
+		).test(page);
+		assert.ok(
+			!inAClass,
+			`index.astro reintroduced the project class .${old}; use the cm-* component instead`,
+		);
+	}
 });
