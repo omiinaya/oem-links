@@ -66,6 +66,37 @@
 	margin: 0;
 }
 
+/* ---------- post / article head ----------
+   The article variant of .cm-head. It is a DIFFERENT block from the page
+   head in exactly one way: it is the last thing before the body text, so
+   it carries a rule under itself that separates the metadata from the
+   prose. .cm-head has no rule because the next block on a page is
+   another section, not the article.
+
+   This rule did not exist while <PostHead> shipped `cm-post-head` on its
+   <header> - a component emitting a class the stylesheet never defined.
+   It was invisible because the showcase never rendered <PostHead>, so
+   `npm run build` never compiled the component and nothing compared the
+   markup's classes against the stylesheet's selectors. A dead class
+   still builds, ships and renders; only the class audit caught it.
+
+   The margin is what carries the separation BELOW the rule. The rule is
+   on the header and the following prose is the header's sibling, so
+   there is no child to collapse against. */
+.cm-post-head {
+	padding: var(--head-top) 0 var(--space-6);
+	border-bottom: 1px solid var(--line);
+	margin-bottom: var(--space-7);
+}
+/* The kicker and byline sit in a head whose h1 already has a bottom
+   margin, so the head's own bottom padding is what opens the gap to
+   the rule. */
+.cm-post-head .cm-kicker { margin-bottom: var(--space-3); }
+.cm-post-head h1 { margin-bottom: var(--space-4); }
+@media (max-width: 680px) {
+	.cm-post-head h1 { line-height: 1.25; }
+}
+
 /* ---- specimens (showcase only, but library-owned so a consumer can
    document its own design language the same way) ---- */
 .cm-swatch {
@@ -156,7 +187,8 @@
 	.cm-spec__chip--motion,
 	.cm-skeleton__line,
 	.cm-skeleton__block,
-	.cm-spinner { animation: none; }
+	.cm-spinner,
+	.cm-toast { animation: none; }
 	/* With no pulse, a skeleton must still read as a placeholder, and a
 	   blinking caret must still read as a caret. */
 	.cm-skeleton__line, .cm-skeleton__block { opacity: 0.55; }
@@ -446,6 +478,67 @@ html {
 .cm-prose a { color: var(--ink-dim); }
 .cm-prose a:hover { color: var(--ink); }
 
+/* ---------- lede ----------
+   The sentence directly under a page head. It is the first thing read
+   on the page, so it gets the widest measure and the most generous
+   leading, and it is dimmer than the body so the eye reads past it
+   to the content. Owned here rather than per consumer: this exact
+   paragraph exists in three projects, and a consumer's own copy is a
+   second implementation that no library fix can reach. */
+.cm-lede {
+	max-width: var(--measure);
+	font-size: max(var(--min-font), 1rem);
+	line-height: 1.75;
+	color: var(--ink-dim);
+	margin: 0 0 var(--space-5);
+}
+
+/* ---------- split: main + aside ----------
+   A wide content block with a narrow metadata column beside it. This
+   is the one two-column layout the system needed, and the decision
+   is baked in: it stacks on a phone. Two columns of text at 390px is
+   two unreadable columns, so there is no "wide phone" case to
+   preserve - the breakpoint exists because the layout is wrong there,
+   not because the screen is small.
+
+   The columns are 1.6fr / 1fr, NOT 2fr/1fr: the aside is a label and
+   a value, and at 1fr it starts wrapping its own values. */
+.cm-split {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--space-6);
+	align-items: start;
+}
+.cm-split__aside { min-width: 0; }
+/* The aside stacks its own blocks, so a consumer adding a second
+   definition list does not have to re-derive the sibling margin. */
+.cm-split__aside > * + * { margin-top: var(--space-5); }
+
+@media (min-width: 700px) {
+	.cm-split {
+		grid-template-columns: 1.6fr 1fr;
+		gap: var(--space-7);
+	}
+}
+
+/* ---------- back link ----------
+   "← back" above a detail page. A tap target in its own right, so it
+   takes the --tap floor on a coarse pointer, and the arrow is its
+   own element so it can slide without the label moving with it. */
+.cm-back {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--ink-dim);
+	text-decoration: none;
+}
+.cm-back:hover { color: var(--ink); }
+.cm-back__arrow {
+	transition: transform var(--cm-t) var(--cm-ease);
+}
+.cm-back:hover .cm-back__arrow,
+.cm-back:focus-visible .cm-back__arrow { transform: translateX(-0.2em); }
+
 @media (max-width: 680px) {
 	.cm-rows--inline .cm-row__desc,
 	.cm-rows--inline .cm-row__meta { display: none; }
@@ -570,7 +663,7 @@ html {
 	font-size: var(--min-font);
 }
 .cm-state__title { color: var(--ink); margin: 0 0 var(--space-2); }
-.cm-state__body { margin: 0 auto; max-width: 34ch; color: var(--ink-dim); }
+.cm-state__body { margin: 0 auto; max-width: var(--measure-narrow); color: var(--ink-dim); }
 .cm-state__actions {
 	margin-top: var(--space-5);
 	display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap;
@@ -891,7 +984,15 @@ html {
 	.cm-head__sub,
 	.cm-rule__label,
 	.cm-tag,
-	.cm-rows--stacked .cm-row__meta {
+	.cm-rows--stacked .cm-row__meta,
+	.cm-stat__label,
+	.cm-stat__note,
+	.cm-timeline__period,
+	.cm-timeline__meta,
+	.cm-card__sub,
+	.cm-card__text,
+	.cm-meter__label,
+	.cm-meter__val {
 		font-size: max(var(--min-font), 0.66rem);
 	}
 	pre { font-size: max(var(--min-font), 0.78rem); }
@@ -971,3 +1072,659 @@ html {
 	.cm-form__actions { justify-content: stretch; }
 	.cm-form__actions .cm-btn { flex: 1 1 100%; justify-content: center; }
 }
+
+/* ============================================================
+   Interactive surfaces: tabs, dialog, toast, dropdown, tooltip
+
+   All five are native-first. Four of them are the platform's
+   element and nothing else — <dialog> for the modal, [popover]
+   for the menu, hover/focus for the tooltip — so the only thing
+   the stylesheet owns is the look. Tabs are the exception: the
+   platform has no tab widget, so the runtime drives them.
+   ============================================================ */
+
+/* ---------- tabs ----------
+   role="tab" on a real <button>, so the control is focusable and
+   activatable before the runtime binds. Panels are hidden with the
+   `hidden` attribute, which is what the runtime toggles. */
+.cm-tabs {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--panel);
+	min-width: 0;
+}
+.cm-tabs__list {
+	display: flex;
+	flex-wrap: wrap;
+	border-bottom: 1px solid var(--line);
+	background: var(--bg-3);
+}
+.cm-tabs__tab {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin: 0;
+	padding: var(--space-2) var(--space-4);
+	border: 0;
+	border-right: 1px solid var(--line);
+	background: transparent;
+	color: var(--ink-dim);
+	font-family: var(--font-mono);
+	font-size: max(var(--min-font), 0.78rem);
+	letter-spacing: 0.04em;
+	text-transform: lowercase;
+	cursor: pointer;
+	transition: color var(--cm-t) var(--cm-ease),
+		background var(--cm-t) var(--cm-ease);
+}
+.cm-tabs__tab:hover { color: var(--ink); background: var(--panel); }
+/* The active tab is marked with an inset rule rather than a thicker
+   border, because a 2px border would widen the box by 1px and walk
+   the whole tab row sideways. An inset shadow costs no layout. */
+.cm-tabs__tab[aria-selected='true'] {
+	color: var(--ink);
+	background: var(--panel);
+	box-shadow: inset 0 -2px 0 var(--ink);
+}
+.cm-tabs__panel { padding: var(--space-5); }
+.cm-tabs__panel > :first-child { margin-top: 0; }
+.cm-tabs__panel > :last-child { margin-bottom: 0; }
+.cm-tabs__panel:focus-visible { outline-offset: -2px; }
+/* `hidden` is the mechanism, and any author `display` outranks the UA
+   sheet — so say it, or a panel that was open at paint stays visible
+   after it is deselected. */
+.cm-tabs__panel[hidden] { display: none; }
+@media (max-width: 520px) {
+	.cm-tabs__list { flex-direction: column; }
+	.cm-tabs__tab { border-right: 0; border-bottom: 1px solid var(--line); }
+	.cm-tabs__tab[aria-selected='true'] { box-shadow: inset 2px 0 0 var(--ink); }
+}
+
+/* ---------- dialog ----------
+   The native element, so focus trapping, Escape, the top layer and
+   the inertness of the page behind it are the platform's job. The
+   stylesheet owns the frame and the scrim. */
+.cm-dialog {
+	width: min(32rem, calc(100% - (2 * var(--gutter))));
+	max-width: none;
+	max-height: calc(100% - (2 * var(--space-7)));
+	/* The UA sheet centres a modal dialog with `margin: auto`. Say it,
+	   or a consumer's `* { margin: 0 }` reset pins it to the corner. */
+	margin: auto;
+	padding: 0;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--bg-2);
+	color: var(--ink);
+	font-family: var(--font-body);
+	box-shadow: var(--shadow-card);
+	overflow: auto;
+}
+/* --scrim is a token, not a literal: the same alpha over #0a0a0a and
+   over #fafafa hides the page by very different amounts, so the wash
+   has to be theme-owned or the light theme gets an unusable dialog. */
+.cm-dialog::backdrop { background: var(--scrim); }
+.cm-dialog__head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding: var(--space-4) var(--space-5);
+	border-bottom: 1px solid var(--line);
+}
+.cm-dialog__title { margin: 0; font-size: 1.05rem; }
+.cm-dialog__body { padding: var(--space-5); }
+.cm-dialog__body > :first-child { margin-top: 0; }
+.cm-dialog__body > :last-child { margin-bottom: 0; }
+.cm-dialog__foot {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	padding: var(--space-4) var(--space-5);
+	border-top: 1px solid var(--line);
+	background: var(--panel);
+}
+
+/* ---------- toast ----------
+   A toast is a transient .cm-alert, so it reuses that component's
+   vocabulary exactly: same border weights, same glyphs, same words.
+   A second, prettier alert component is how two systems end up. */
+.cm-toast-region {
+	position: fixed;
+	right: var(--space-5);
+	bottom: var(--space-5);
+	z-index: 200;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	width: min(24rem, calc(100% - (2 * var(--gutter))));
+	/* The region is a container, not a wall: a stack of toasts must
+	   never eat a click on the page behind it. */
+	pointer-events: none;
+}
+.cm-toast {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid var(--line);
+	border-left-width: 3px;
+	border-radius: var(--radius-sm);
+	background: var(--panel);
+	color: var(--ink);
+	font-size: max(var(--min-font), 0.82rem);
+	pointer-events: auto;
+	box-shadow: var(--shadow-card);
+	animation: cm-toast-in var(--cm-t-slow) var(--cm-ease);
+}
+@keyframes cm-toast-in {
+	from { opacity: 0; transform: translateY(var(--space-2)); }
+}
+.cm-toast__mark { flex: 0 0 auto; color: var(--ink-faint); }
+.cm-toast__body { min-width: 0; }
+.cm-toast__title { margin: 0 0 var(--space-1); }
+.cm-toast__text { margin: 0; color: var(--ink-dim); }
+.cm-toast__close {
+	flex: 0 0 auto;
+	align-self: flex-start;
+	padding: 0 var(--space-1);
+	border: 0;
+	background: transparent;
+	color: var(--ink-faint);
+	font-family: var(--font-mono);
+	font-size: max(var(--min-font), 0.78rem);
+	line-height: 1.2;
+	cursor: pointer;
+}
+.cm-toast__close:hover { color: var(--ink); }
+.cm-toast--ok { border-left-color: var(--ink-dim); }
+.cm-toast--warn { border-left-color: var(--ink-faint); }
+.cm-toast--err { border-left-color: var(--ink); }
+/* Same glyphs as .cm-alert, from CSS, so a greyscale print and a
+   colour-blind read both get the state without relying on hue. */
+.cm-toast--ok .cm-toast__mark::before { content: '\25cf\00a0'; }
+.cm-toast--warn .cm-toast__mark::before { content: '\25b2\00a0'; }
+.cm-toast--err .cm-toast__mark::before { content: '\2715\00a0'; }
+@media (max-width: 680px) {
+	/* A fixed corner stack eats the bottom of a phone screen, which is
+	   where the primary action is. Full width, anchored to the bottom. */
+	.cm-toast-region {
+		right: var(--gutter);
+		left: var(--gutter);
+		bottom: var(--gutter);
+		width: auto;
+	}
+}
+
+/* ---------- dropdown ----------
+   The native Popover API: light-dismiss, Escape, focus return and the
+   top layer are the platform's, and the markup carries `popovertarget`,
+   so there is no runtime code for this component at all. */
+.cm-dropdown { position: relative; display: inline-block; }
+.cm-dropdown__menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + var(--space-1));
+	z-index: 150;
+	min-width: 12rem;
+	margin: 0;
+	padding: var(--space-1);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--bg-2);
+	color: var(--ink);
+	font-family: var(--font-mono);
+	font-size: max(var(--min-font), 0.82rem);
+	box-shadow: var(--shadow-card);
+}
+/* The UA sheet hides a closed popover, but this rule declares no display
+   and a consumer's does not have to be polite. */
+.cm-dropdown__menu:not(:popover-open) { display: none; }
+.cm-dropdown__item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	margin: 0;
+	padding: var(--space-2) var(--space-3);
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--ink-dim);
+	font: inherit;
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+}
+.cm-dropdown__item:hover,
+.cm-dropdown__item:focus-visible {
+	background: var(--bg-3);
+	color: var(--ink);
+	text-decoration: none;
+}
+.cm-dropdown__item[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
+.cm-dropdown__sep {
+	height: 0;
+	margin: var(--space-1) 0;
+	border: 0;
+	border-top: 1px solid var(--line);
+}
+
+/* ---------- tooltip ----------
+   A real element rather than generated content, because
+   `aria-describedby` has to resolve to something in the accessibility
+   tree and a ::after is not there. The trigger is focusable, so
+   :focus-within reveals the tip from the keyboard with no JS. */
+.cm-tooltip { position: relative; display: inline-block; }
+.cm-tooltip__tip {
+	position: absolute;
+	/* A tip is wider than the space it is centred over, often by a lot:
+	   18rem against a 310px content column leaves the tip hanging past
+	   the viewport. Measured at 390px the centred tip ran to right:418px
+	   (the document then scrolled sideways by 27px), and --end ran to
+	   left:-169px at 320px. An absolutely-positioned element widens the
+	   document rather than clipping, so the whole page scrolled.
+
+	   The cap below is derived from the viewport so it is correct at
+	   every width; the centring transform and the alignment variants
+	   are in the second .cm-tooltip__tip block, further down. */
+	left: 50%;
+	bottom: calc(100% + var(--space-2));
+	z-index: 150;
+	width: max-content;
+	/* The viewport cap lives in the second .cm-tooltip__tip block, with
+	   the centring transform and the alignment variants. It is declared
+	   once, not here too: two identical declarations in two blocks is
+	   duplication that reads as two decisions and survives a deletion of
+	   either one. */
+	margin: 0;
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--bg-3);
+	color: var(--ink);
+	font-family: var(--font-mono);
+	font-size: max(var(--min-font), 0.78rem);
+	line-height: 1.5;
+	box-shadow: var(--shadow-card);
+	opacity: 0;
+	/* visibility, not just opacity: a transparent tip is still read by
+	   a screen reader and still swallows a click on the button under it. */
+	visibility: hidden;
+	pointer-events: none;
+	transition: opacity var(--cm-t) var(--cm-ease);
+}
+.cm-tooltip:hover .cm-tooltip__tip,
+.cm-tooltip:focus-within .cm-tooltip__tip {
+	opacity: 1;
+	visibility: visible;
+}
+/* CSS cannot flip a tip that would leave the viewport, so the edge
+   cases are named rather than discovered.
+
+   The width cap is the part that was missing, and it has to be the
+   VIEWPORT and not the trigger. A tip is routinely far wider than the
+   button it describes - measured 288px of tip on a 79px button - so
+   `width: auto` between two zero offsets makes the box fill the trigger
+   and the text wrap to five lines (measured 141px tall). Pinning the
+   tip to its trigger is not a fix, it is a different bug.
+
+   `overflow-x: clip` on the root is the backstop for anything that still
+   overhangs, but it is NOT sufficient on its own: with `overflow-y:
+   scroll` alongside it, WebKit computes the x axis to `hidden`, which
+   is still scrollable. So the tip has to be genuinely inside the
+   viewport, which is what the cap does. */
+.cm-tooltip__tip {
+	width: max-content;
+	/* A centred tip hangs half its width either side of its trigger, so
+	   half a tip has to fit between the trigger and the screen edge. The
+	   honest statement of that is the gutter, not a fraction of the
+	   trigger: capping at the trigger's own width (tried, measured) made
+	   the tip 93px wide and wrapped it to 5-6 lines, which is worse than
+	   the overflow it fixed. The viewport cap keeps a tip one or two
+	   lines tall at every width measured, and the alignment variants
+	   below are what actually keep it on screen near an edge. */
+	max-width: min(18rem, calc(100vw - 2 * var(--gutter)));
+	/* Without this transform `left:50%` put the trigger's MIDDLE at the
+	   tip's left edge, so the tip always hung to the right of the
+	   trigger. Centring is the transform's whole job. */
+	transform: translateX(-50%);
+}
+.cm-tooltip--start .cm-tooltip__tip { left: 0; transform: none; }
+.cm-tooltip--end .cm-tooltip__tip { left: auto; right: 0; transform: none; }
+.cm-tooltip--below .cm-tooltip__tip { bottom: auto; top: calc(100% + var(--space-2)); }
+
+/* ============================================================
+   Records: stat tiles and a dated timeline
+
+   Both are containers for information the library had no
+   honest way to express. A metric is not a key/value row and a
+   work history is not a link list, so each consumer was
+   re-declaring a private version of one of these.
+   ============================================================ */
+
+/* ---------- stat tiles ----------
+   A number with its label. `.cm-stats` is the list, `.cm-stat`
+   the tile, so a caller can mark up whatever its data is
+   (li, div, article) and only owes the two classes. */
+.cm-stats {
+	display: grid;
+	/* auto-fit, not a fixed column count: the tile count is data,
+	   and a hardcoded 3 or 4 leaves a stranded half-row at every
+	   other count. min() keeps one tile from forcing overflow on
+	   a 320px screen. */
+	grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+	gap: var(--space-3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.cm-stats > li { margin: 0; min-width: 0; }
+.cm-stat {
+	display: flex;
+	flex-direction: column;
+	/* A scale step, not a fixed height: two tiles in a row must
+	   match whether one label wraps to two lines or not. */
+	gap: var(--space-1);
+	height: 100%;
+	padding: var(--space-4);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--panel);
+	min-width: 0;
+}
+/* 1.35rem deliberately sits UNDER the section h2 (1.45rem). A metric
+   tile is allowed to be emphatic; it is not allowed to be the loudest
+   thing in its own section, or the heading stops being the heading. */
+.cm-stat__val {
+	margin: 0;
+	font-size: 1.35rem;
+	font-weight: 700;
+	line-height: 1.15;
+	letter-spacing: -0.02em;
+	color: var(--ink);
+	/* "5,000+" must wrap inside its tile rather than widen the grid. */
+	overflow-wrap: break-word;
+	min-width: 0;
+}
+.cm-stat__label {
+	font-size: max(var(--min-font), 0.72rem);
+	line-height: 1.5;
+	color: var(--ink-dim);
+	min-width: 0;
+}
+/* The sub-line is the qualifier that makes a number honest
+   ("across 40+ devices", not just "40+"). Optional. */
+.cm-stat__note {
+	font-size: max(var(--min-font), 0.72rem);
+	line-height: 1.5;
+	color: var(--ink-faint);
+	min-width: 0;
+}
+
+/* ---------- timeline ----------
+   A dated record. The rail is the whole reason this is not
+   .cm-rows: it says "these are in time order" without a date
+   column, which is what a work or release history wants.
+
+   The rail and the dot are drawn on the ITEM, never on a wrapper,
+   so items can be dropped into any container and the last one
+   still terminates the line. */
+.cm-timeline {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.cm-timeline > li { margin: 0; }
+.cm-timeline__item {
+	position: relative;
+	padding: 0 0 var(--space-6) var(--space-6);
+	min-width: 0;
+}
+.cm-timeline__item:last-child { padding-bottom: 0; }
+/* The rail stops at the last item. A line that outlives the final
+   dot implies a record that is coming, which is a claim the data
+   is not making. */
+.cm-timeline__item::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.5em;
+	bottom: 0;
+	width: 1px;
+	background: var(--line);
+}
+.cm-timeline__item:last-child::before { content: none; }
+/* A square dot, not a circle: the house already draws a square
+   checkbox for the same reason — a mark reads as drawn, not as
+   a bullet someone pasted in. Centred on the rail by its own
+   half-width, so the two can never drift apart. */
+.cm-timeline__item::after {
+	content: '';
+	position: absolute;
+	left: -0.25rem;
+	top: 0.45em;
+	width: 0.5rem;
+	height: 0.5rem;
+	border: 1px solid var(--ink-dim);
+	background: var(--bg);
+}
+/* "This is the record I am in now." Filled rather than a second
+   hue, because the palette has no hue to spend. */
+.cm-timeline__item--now::after {
+	background: var(--ink);
+	border-color: var(--ink);
+}
+.cm-timeline__period {
+	display: block;
+	font-size: max(var(--min-font), 0.72rem);
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--ink-faint);
+	margin-bottom: var(--space-1);
+}
+.cm-timeline__role {
+	display: block;
+	font-weight: 700;
+	color: var(--ink);
+	line-height: 1.3;
+}
+.cm-timeline__org {
+	display: block;
+	font-size: max(var(--min-font), 0.8rem);
+	color: var(--ink-dim);
+	margin-top: var(--space-0);
+}
+/* The org line carries location and type as well as the name, so
+   it must be allowed to wrap: "Company, City" plus a qualifier
+   is a long string in a narrow column. */
+.cm-timeline__meta {
+	display: block;
+	font-size: max(var(--min-font), 0.72rem);
+	color: var(--ink-faint);
+	margin-top: var(--space-0);
+}
+.cm-timeline__body {
+	margin-top: var(--space-3);
+	font-size: max(var(--min-font), 0.85rem);
+	color: var(--ink-dim);
+	line-height: 1.7;
+	min-width: 0;
+}
+.cm-timeline__body > :first-child { margin-top: 0; }
+.cm-timeline__body > :last-child { margin-bottom: 0; }
+.cm-timeline__body ul { margin: 0; padding-left: 1.2em; }
+.cm-timeline__body li { margin-bottom: var(--space-2); }
+/* Wrapping under its own marker: a ::before bullet is part of the
+   text run, so without this a second line snaps back to the
+   container edge and runs UNDER the marker. Same fix as
+   .cm-status__value. */
+.cm-timeline__body li::before { content: none; }
+.cm-timeline__body li::marker { color: var(--ink-faint); }
+
+/* ---------- cards ----------
+   A bordered surface with a header, for one subject that needs more
+   room than a .cm-kv row. Deliberately NOT .cm-panel: a panel is a
+   generic surface, a card is a unit of content with a title. The
+   difference matters because a card is what a reader scans as an
+   item, and a grid of them has to line up.
+
+   The accent rule on the left is the one piece of decoration. It is
+   drawn with a border on the header rather than a ::before, so the
+   header is still one box for layout purposes and a card with no
+   accent (the default) loses nothing but a line. */
+.cm-cards {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+	gap: var(--space-4);
+	align-items: start;
+}
+.cm-cards > li { margin: 0; min-width: 0; }
+.cm-card {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	/* The stretched link below needs a containing block. */
+	position: relative;
+	min-width: 0;
+	background: var(--panel);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+}
+/* The accent is a border, not a gradient or a glow: the palette has
+   no hue to spend on decoration, and a left rule reads as "this is
+   the marked item" in both themes. */
+.cm-card--accent { border-left: 2px solid var(--accent); }
+.cm-card__head {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding: var(--space-4);
+	border-bottom: 1px solid var(--line-soft);
+	min-width: 0;
+}
+.cm-card__title {
+	margin: 0;
+	font-size: 1.05rem;
+	font-weight: 700;
+	line-height: 1.25;
+	letter-spacing: -0.01em;
+	color: var(--ink);
+	min-width: 0;
+	overflow-wrap: break-word;
+}
+.cm-card__sub {
+	margin: 0;
+	font-size: max(var(--min-font), 0.72rem);
+	line-height: 1.5;
+	color: var(--ink-faint);
+	min-width: 0;
+}
+.cm-card__body {
+	padding: var(--space-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	min-width: 0;
+	flex: 1 1 auto;
+}
+.cm-card__body > :first-child { margin-top: 0; }
+.cm-card__body > :last-child { margin-bottom: 0; }
+.cm-card__text {
+	margin: 0;
+	font-size: max(var(--min-font), 0.85rem);
+	line-height: 1.7;
+	color: var(--ink-dim);
+	min-width: 0;
+}
+.cm-card__foot {
+	display: flex;
+	/* A status like "no expiry · not verified" is longer than the link
+	   beside it, and at 390px the pair wraps. `margin-left:auto` only
+	   right-aligns on ONE line: once the link wraps, the auto margin
+	   resolves against the line it lands on and the two boxes sit on
+	   top of each other. So the footer stacks instead, and the link
+	   aligns to the start of its own line. */
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--space-2);
+	padding: var(--space-3) var(--space-4);
+	border-top: 1px solid var(--line-soft);
+	background: var(--bg-2);
+	min-width: 0;
+}
+/* A card is a link as often as it is a panel, and the WHOLE card has
+   to be the target. The stretch is done on the child anchor rather
+   than with a ::after overlay so the text stays selectable and the
+   focus ring lands on the real element. */
+.cm-card__link { color: var(--accent); }
+.cm-card__link::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+}
+.cm-card__link:hover { text-decoration: underline; }
+
+/* ---------- meter ----------
+   A labelled proportion bar. The system had no honest way to show
+   "24% of this exam is one domain", which is a number, so it is a
+   number: a scale, not a decoration.
+
+   The bar is drawn by the consumer as a --cm-meter-fill custom
+   property in percent, so the component never has to parse a value
+   and can never disagree with the number printed beside it. */
+.cm-meters {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-width: 0;
+}
+.cm-meter {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	min-width: 0;
+}
+.cm-meter__top {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--space-3);
+	min-width: 0;
+}
+.cm-meter__label {
+	font-size: max(var(--min-font), 0.78rem);
+	color: var(--ink-dim);
+	min-width: 0;
+	overflow-wrap: break-word;
+}
+.cm-meter__val {
+	font-size: max(var(--min-font), 0.78rem);
+	font-weight: 700;
+	color: var(--ink);
+	font-variant-numeric: tabular-nums;
+	flex: 0 0 auto;
+}
+.cm-meter__track {
+	height: 0.5rem;
+	background: var(--bg-3);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+	min-width: 0;
+}
+.cm-meter__fill {
+	display: block;
+	height: 100%;
+	width: var(--cm-meter-fill, 0%);
+	background: var(--ink-dim);
+}
+.cm-meter--accent .cm-meter__fill { background: var(--accent); }
+/* Muted fill for the domain a reader is least likely to care about,
+   so the shape of the bar carries meaning too, not just its length. */
+.cm-meter--faint .cm-meter__fill { background: var(--line); }

@@ -23,6 +23,21 @@
 	--radius: 10px;
 	--radius-sm: 6px;
 
+	/* ---- measure (line length) ----------------------------------
+	   A width in `ch` against the monospace font, so a line's character
+	   count is the thing being decided rather than an accident of the
+	   container. Two widths are genuinely different jobs, and both
+	   existed as raw numbers in a consumer:
+	     --measure       a reading column, the one prose sits in
+	     --measure-narrow a single compact block (a status line, a
+	                      definition body) that must not be re-wrapped
+	   Declared here rather than per component because a measure is a
+	   property of TYPE, not of a component: a consumer that invents its
+	   own is how oem-portfolio ended up with 34ch, 58ch and 68ch
+	   literals in one file, none of them named. */
+	--measure: 68ch;
+	--measure-narrow: 34ch;
+
 	/* Widest colour swatch: the chip (1.4em) + its gap + the longest token
 	   name in the system at --min-font. Sized once, from the tokens. */
 	--swatch-col: calc(1.4em + var(--space-2) + 15ch);
@@ -123,6 +138,12 @@
 	--shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
 	--shadow-card: 0 20px 50px -24px rgba(0, 0, 0, 0.8);
 
+	/* scrim — the wash behind a modal dialog. A translucent black is the
+	   only dimmer that exists in a greyscale system, and it is the one
+	   colour that has to differ per theme: the same alpha over #0a0a0a
+	   and over #fafafa does not hide the page by the same amount. */
+	--scrim: rgba(0, 0, 0, 0.72);
+
 	/* selection */
 	--selection-bg: rgba(255, 255, 255, 0.14);
 	--selection-color: #ffffff;
@@ -158,6 +179,11 @@
 
 	--shadow-1: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
 	--shadow-card: 0 20px 50px -26px rgba(0, 0, 0, 0.18);
+
+	/* The scrim is a wash, not a shadow: it only has to separate the
+	   dialog from the page. 0.72 of black over a near-white page reads
+	   as a dark panel with a hole in it, so light needs its own value. */
+	--scrim: rgba(24, 24, 24, 0.42);
 
 	--selection-bg: rgba(0, 0, 0, 0.12);
 	--selection-color: #000000;
@@ -196,6 +222,7 @@
 	--footer-bg: #080808;
 	--shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
 	--shadow-card: 0 20px 50px -24px rgba(0, 0, 0, 0.8);
+	--scrim: rgba(0, 0, 0, 0.72);
 	--selection-bg: rgba(255, 255, 255, 0.14);
 	--selection-color: #ffffff;
 	--vignette: radial-gradient(120% 90% at 50% 0%, transparent 62%, rgba(0, 0, 0, 0.5));
@@ -222,6 +249,7 @@
 	--footer-bg: #f0f0f0;
 	--shadow-1: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
 	--shadow-card: 0 20px 50px -26px rgba(0, 0, 0, 0.18);
+	--scrim: rgba(24, 24, 24, 0.42);
 	--selection-bg: rgba(0, 0, 0, 0.12);
 	--selection-color: #000000;
 	--vignette: radial-gradient(120% 90% at 50% 0%, transparent 62%, rgba(0, 0, 0, 0.06));
