@@ -35,7 +35,17 @@ jobs:
         run: npm run build
 
       - name: Sanity-check the build output
-        run: test -f dist/index.html && grep -q 'class="link-row"' dist/index.html
+        # Assert the LIBRARY component, not the project's former parallel
+        # implementation. This grep named `link-row`, which the oem-ui
+        # migration replaced with `cm-row`; it stayed green on the deploy
+        # while failing here for two commits, because nothing in the deploy
+        # path runs this job.
+        run: |
+          test -f dist/index.html
+          grep -q 'class="cm-row"' dist/index.html
+          grep -q 'class="cm-rows' dist/index.html
+          # and the page must not have fallen back to the old local classes
+          ! grep -q 'class="link-row"' dist/index.html
 
       # Assets are referenced with an absolute path built from `base`. A wrong
       # base still builds cleanly and then 404s every asset in production, so
