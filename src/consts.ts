@@ -8,11 +8,11 @@ export const AUTHOR_HANDLE = 'omiinaya';
 export const AUTHOR_EMAIL = 'omar@mrxlab.net';
 export const AUTHOR_GITHUB = 'https://github.com/omiinaya';
 
-// Theme persistence key. Distinct from the blog's so the two sites
-// don't fight over one preference.
-export const THEME_KEY = 'oem-links-theme';
-
-// Theme keys this site used before the oem-ui runtime owned the toggle.
-// A returning visitor's saved preference lives under one of these, so the
-// runtime reads it and folds it into THEME_KEY on first load.
-export const LEGACY_THEME_KEYS = ['cm-theme'];
+// Theme persistence key. Declared ONCE on <html> in src/layouts/Layout.astro
+// as data-cm-theme-key / data-cm-theme-legacy, which is the contract both the
+// FOUC guard and the oem-ui runtime read. It used to be an exported constant
+// here, consumed by a project-local guard generator - but a guard that takes
+// its key list as a build-time argument cannot see a theme saved under a
+// legacy key, because it is evaluated before the runtime bundle exists. That
+// is the black flash the guard exists to prevent, so the key moved to the DOM
+// and the second copy of the guard was deleted.

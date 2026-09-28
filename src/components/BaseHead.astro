@@ -1,6 +1,6 @@
 ---
 // The design system is cli-mono (src/styles/cli-mono/), installed from
-// /root/projects/cli-mono via scripts/install.sh. This project's own
+// /root/projects/oem-ui via scripts/install.sh. This project's own
 // overrides live in site.css, loaded last so it wins on equal specificity.
 import '../styles/cli-mono/tokens.css';
 import '../styles/cli-mono/base.css';
@@ -8,8 +8,14 @@ import '../styles/cli-mono/components.css';
 import '../styles/site.css';
 import type { ImageMetadata } from 'astro';
 import { Font } from 'astro:assets';
-import { THEME_KEY, LEGACY_THEME_KEYS } from '../consts';
-import { themeInitSnippet } from '../lib/cm-theme';
+// The FOUC guard, from the library. Imported with ?raw and inlined, so it
+// runs before any stylesheet. It used to be a hand-rolled copy in
+// src/lib/cm-theme.ts that took the key list as a build-time argument -
+// which is the bug the library fixed: a key list assembled at build time
+// cannot see a theme saved under a LEGACY key, because the guard is
+// evaluated before the runtime bundle exists, so every returning light-theme
+// visitor got a black flash. One shared file removes the second copy.
+import themeGuard from '../js/cli-mono-theme-guard.js?raw';
 
 interface Props {
 	title: string;
@@ -20,18 +26,13 @@ interface Props {
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 const { title, description } = Astro.props;
-
-// The FOUC guard: the library emits the snippet, we only supply this
-// project's storage key. It must run BEFORE any stylesheet so a
-// light-theme visitor never sees a dark flash.
-const cmThemeGuard = themeInitSnippet(THEME_KEY, LEGACY_THEME_KEYS);
 ---
 
 <!-- Global Metadata -->
 <!-- prevent flash-of-wrong-theme (must precede every stylesheet) -->
-<script is:inline set:html={cmThemeGuard} />
+<script is:inline set:html={themeGuard} />
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}favicon.svg`} />
 <link rel="icon" href={`${import.meta.env.BASE_URL}favicon.ico`} />
 <!-- No sitemap link: this site is a single static page and generates none.

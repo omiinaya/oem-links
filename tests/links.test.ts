@@ -372,22 +372,57 @@ test('the layout declares the project theme key and loads the runtime', async ()
 	);
 });
 
-test('the FOUC guard is the first node in head and carries the project key', async () => {
+test('the FOUC guard is the library\'s, it is first in head, and it reads the DOM for keys', async () => {
 	const head = await readFile(
 		new URL('../src/components/BaseHead.astro', import.meta.url),
 		'utf8',
 	);
+
+	// The guard is now the shared library file, inlined via ?raw. Assert the
+	// IMPORT, because a source-level assertion cannot see whether the
+	// snippet actually reached dist/ - and an <script src> here would run
+	// after the stylesheets, which is the bug this exists to prevent.
+	assert.match(
+		head,
+		/import themeGuard from '\.\.\/js\/cli-mono-theme-guard\.js\?raw'/,
+		'BaseHead must import the library guard with ?raw; hand-rolling it is what caused the flash',
+	);
 	assert.ok(
-		head.indexOf('set:html={cmThemeGuard}') !== -1,
+		head.indexOf('set:html={themeGuard}') !== -1,
 		'BaseHead must emit the guard',
 	);
 	assert.ok(
-		head.indexOf('set:html={cmThemeGuard}') < head.indexOf('<meta charset'),
+		head.indexOf('set:html={themeGuard}') < head.indexOf('<meta charset'),
 		'the guard must precede <meta charset>, or a light-theme visitor sees a dark flash',
 	);
+
+	// The regression this replaced: a project-local generator took the key
+	// list as a BUILD-TIME argument. The guard runs before the runtime
+	// bundle exists, so a list assembled at build time cannot see a theme
+	// saved under a legacy key, and that returning light-theme visitor gets
+	// a black flash. The shared file must read the keys from the DOM, and
+	// this project declares BOTH of them on <html>.
+	assert.ok(
+		!/\bthemeInitSnippet\b/.test(head.replace(/\/\*[\s\S]*?\*\//g, '')),
+		'BaseHead must not generate the guard locally; use the library file',
+	);
+	const guard = await readFile(
+		new URL('../src/js/cli-mono-theme-guard.js', import.meta.url),
+		'utf8',
+	);
 	assert.match(
-		head,
-		/themeInitSnippet\(THEME_KEY, LEGACY_THEME_KEYS\)/,
-		'the guard must be generated for this project\'s key, including legacy keys',
+		guard,
+		/data-cm-theme-key/,
+		'the guard must read the project key from <html>, not bake it in',
+	);
+	assert.match(
+		guard,
+		/data-cm-theme-legacy/,
+		'the guard must read the legacy keys from <html> too, or a returning visitor flashes black',
+	);
+	assert.doesNotMatch(
+		guard.replace(/\/\*[\s\S]*?\*\//g, ''),
+		/localStorage\.setItem/,
+		'the guard must never write to storage; that is the runtime\'s job, after the paint',
 	);
 });
