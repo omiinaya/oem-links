@@ -223,17 +223,45 @@
 				panel.removeAttribute('data-open');
 				doc.documentElement.removeAttribute('data-cm-nav-open');
 			}
-			/* The drawer is fixed, so the page behind it would still
-			   scroll under the reader's thumb. Lock the body and hand
-			   back the scrollbar width, or the page shifts sideways the
-			   moment the drawer opens. */
+			/* The drawer is position:fixed and the scrim beneath it is
+			   position:fixed too, so the panel covers the page from the first
+			   frame: opening it causes no reflow, nothing shifts sideways, and
+			   there is nothing to compensate for.
+
+			   This used to set `overflow: hidden` on <body> as a scroll lock.
+
+			   DO NOT LOCK BY SETTING `overflow: hidden` ON THE BODY. That
+			   was the shipped behaviour and it was wrong twice over:
+
+			     1. It did not lock anything. <html> is the scrolling element
+			        in this layout (body's scrollHeight equals its
+			        clientHeight), so `body { overflow: hidden }` never
+			        stopped the page. Measured: a wheel gesture over the scrim
+			        still moved the document 500px with the drawer open.
+
+			     2. It BROKE THE STICKY HEADER, which is the bug Omar hit.
+			        A box with `overflow: hidden` becomes a scroll container,
+			        so `body` became the containing block for the sticky
+			        header. The header then stuck to a body that never
+			        scrolls, and rode the document out of the viewport:
+			        measured headerTop -1200 with the drawer open at 1200px,
+			        i.e. the bar was entirely off-screen, leaving exactly the
+			        "gap at the top" that was reported.
+
+			   The layout is already stable without a lock - the drawer is
+			   position:fixed over a position:fixed scrim, so it covers the
+			   page from the first frame and no reflow happens on open. So
+			   there is nothing to compensate for either, and the whole
+			   overflow/padding dance is removed. The scrim swallows the
+			   taps, and the drawer scrolls internally on its own.
+
+			   If a lock is ever genuinely needed, it belongs on the element
+			   that actually scrolls AND must preserve scroll position - not
+			   on `body`, which is neither. */
 			var body = doc.body;
 			if (!body) return;
-			if (open) {
-				var gap = window.innerWidth - doc.documentElement.clientWidth;
-				body.style.overflow = 'hidden';
-				if (gap > 0) body.style.paddingRight = gap + 'px';
-			} else {
+			if (!open) {
+				// Clear anything a previous version or a consumer left behind.
 				body.style.overflow = '';
 				body.style.paddingRight = '';
 			}
@@ -634,7 +662,15 @@
 		});
 	}
 
-	function toast(msg) {
+	/* `opts.duration` overrides the 6s default. A lag warning is an FYI, not
+	   a decision the user has to read, so it should not hold the region for
+	   as long as an error would. null/0/undefined all mean "keep the
+	   default" - 0 meaning "never expires" is sonner's rule and would make
+	   the region grow without bound. */
+	function toast(msg, severity, opts) {
+		var life = (opts && typeof opts.duration === 'number' && opts.duration > 0)
+			? opts.duration
+			: TOAST_MS;
 		var region =
 			document.querySelector('[data-cm-toasts]') ||
 			(function () {
@@ -648,10 +684,37 @@
 			})();
 		var node = null;
 		if (typeof msg === 'string') {
-			var span = document.createElement('span');
-			span.className = 'cm-toast';
-			span.textContent = msg;
-			node = span;
+			/* A toast carries the SAME severity vocabulary as .cm-alert -
+			   ok / warn / err - because a toast IS a transient alert. Two
+			   vocabularies is how an app ends up with one system's
+			   border weights and another's glyphs. The mark is a text
+			   node in the library's own glyphs, so it inherits the token
+			   colours instead of a hard-coded green. */
+			var sev = severity === 'error' ? 'err'
+				: severity === 'success' ? 'ok'
+				: severity === 'warning' ? 'warn'
+				: null;
+			if (sev) {
+				var box = document.createElement('div');
+				box.className = 'cm-toast cm-alert--' + sev;
+				var mark = document.createElement('span');
+				mark.className = 'cm-toast__mark';
+				var body = document.createElement('div');
+				body.className = 'cm-toast__body';
+				var text = document.createElement('p');
+				text.className = 'cm-toast__text';
+				text.style.margin = '0';
+				text.textContent = msg;
+				body.appendChild(text);
+				box.appendChild(mark);
+				box.appendChild(body);
+				node = box;
+			} else {
+				var span = document.createElement('span');
+				span.className = 'cm-toast';
+				span.textContent = msg;
+				node = span;
+			}
 		} else if (msg && msg.nodeType === 1) {
 			node = msg;
 		} else {
@@ -662,7 +725,7 @@
 		if (typeof setTimeout === 'function') {
 			setTimeout(function () {
 				dismiss(node);
-			}, TOAST_MS);
+			}, life);
 		}
 		return node;
 	}
