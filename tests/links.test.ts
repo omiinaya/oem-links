@@ -13,6 +13,12 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { ICON_NAMES } from '../src/lib/icon-names.ts';
 import { GROUP_ORDER, LINKS } from '../src/data/links.ts';
+import {
+	AUTHOR_EMAIL,
+	AUTHOR_HANDLE,
+	SITE_DESCRIPTION,
+	SITE_TITLE,
+} from '../src/consts.ts';
 
 test('every link has a title, description, href and valid kind', () => {
 	for (const link of LINKS) {
@@ -425,4 +431,71 @@ test('the FOUC guard is the library\'s, it is first in head, and it reads the DO
 		/localStorage\.setItem/,
 		'the guard must never write to storage; that is the runtime\'s job, after the paint',
 	);
+});
+
+// The library's Footer replaced this site's hand-rolled one, which emitted
+// its separators as ELEMENTS (`<span class="dot">·</span>`) inside a
+// `flex-wrap: wrap` row. A separator that is its own flex item can be the
+// last thing on a wrapped line with nothing after it.
+//
+// MEASURED in WebKit against the live site at 320/360/390/402/430 x
+// {667,844}: a line ended with a stranded `·` at 12 of 14 viewports, and at
+// 320px the footer rendered THREE lines for five fragments. The library
+// generates the separator with `::before` on the item it precedes, so no
+// line can end with one. tests/verify-footer-webkit.py measures that
+// geometry at seven widths and is proven to fail on the old markup.
+test('the footer renders the library component, not a parallel one', async () => {
+	const footer = await readFile(
+		new URL('../src/components/Footer.astro', import.meta.url),
+		'utf8',
+	);
+	const code = footer.replace(/\/\*[\s\S]*?\*\//g, '');
+	assert.match(
+		code,
+		/from '\.\.\/astro\/Footer\.astro'/,
+		'Footer.astro must render the library component',
+	);
+	assert.doesNotMatch(
+		code,
+		/class="dot"|class="bar"|class="ok"/,
+		'this footer still emits separator/status ELEMENTS; a separator that is its own ' +
+			'flex item strands at the end of a wrapped line',
+	);
+	assert.doesNotMatch(
+		code,
+		/::(before|after)/,
+		'this footer still generates its own separator; the library owns that rule and a ' +
+			'second copy drifts from it',
+	);
+});
+
+// config.ts is installed by `install.sh --astro` and is the ONE file the
+// installer will not overwrite, so it carries this site's identity. It
+// restates the values in src/consts.ts rather than importing them (an
+// import would drag the consts tree into every component that renders an
+// identity), which means the two can drift apart silently. Compare them.
+test('the library config.ts carries this site identity, not the library placeholders', async () => {
+	const cfg = await readFile(
+		new URL('../src/astro/config.ts', import.meta.url),
+		'utf8',
+	);
+	const read = (key: string) => {
+		const m = new RegExp(`${key}:\\s*'([^']+)'`).exec(cfg);
+		return m ? m[1] : null;
+	};
+	assert.equal(read('title'), SITE_TITLE, 'config.ts title must match src/consts.ts');
+	assert.equal(read('description'), SITE_DESCRIPTION, 'config.ts description must match src/consts.ts');
+	assert.equal(read('author'), AUTHOR_HANDLE, 'config.ts author must match src/consts.ts');
+	assert.equal(read('email'), AUTHOR_EMAIL, 'config.ts email must match src/consts.ts');
+	assert.equal(read('url'), 'https://links.oem.ngo', 'config.ts url must be this site');
+
+	// The placeholders the library ships with. An installer that overwrote
+	// this file would put all of these on a live page without any failure
+	// anywhere - which is why the installer skips it.
+	for (const placeholder of ['oem/ui', 'ui.mrx.sh', 'omar@mrx.sh']) {
+		assert.ok(
+			!cfg.includes(placeholder),
+			`config.ts still carries the library placeholder "${placeholder}"`,
+		);
+	}
 });
