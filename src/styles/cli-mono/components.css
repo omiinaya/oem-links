@@ -91,8 +91,30 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-3);
+	/* A head row is a title plus whatever flags that host carries. At 390px
+	   rpm puts a domain and eight chips on this line, and because nothing
+	   here could wrap, the row stayed one line at whatever width the flags
+	   happened to take - and the ip:port slot below it was measured at
+	   48px, ellipsising `192.168.1.104` to `192.168…`. The slot was not
+	   overflowing the card (that was already fixed); it was being starved.
+	   Wrapping lets the flags use their own lines instead of auctioning
+	   the width away from the content underneath. */
+	flex-wrap: wrap;
 }
-.cm-head-row__action { margin-left: auto; flex: 0 0 auto; }
+/* `gap` and `align-items` were missing here, so the row fell back to
+   `gap: normal` and stretch alignment. MEASURED on rpm's Dashboard in
+   WebKit at 390px: a 22px `.cm-chip` and two 44px `.cm-btn` sat flush
+   with zero space between them, their tops landing at 239 / 227 / 225 -
+   three baselines for one row. `align-items: center` lines them up;
+   `gap: var(--space-2)` gives them the same breathing room as the rest
+   of the sheet. */
+.cm-head-row__action {
+	margin-left: auto;
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
 /* A trailing METADATA chip - a count, a total - belongs to the right
    edge of the header row, not floating beside the title.
 
@@ -240,7 +262,23 @@
    three words per line. */
 @media (max-width: 420px) {
 	.cm-head-row { flex-wrap: wrap; }
-	.cm-head-row__action { margin-left: 0; width: 100%; }
+	.cm-head-row__action {
+		margin-left: 0;
+		width: 100%;
+		/* The action row can itself hold three controls, and on its own
+		   310px line a search + two buttons cannot share it honestly.
+		   MEASURED on rpm's Certificates in WebKit at 390px: the
+		   `.cm-search` shrank to 75px (flex `0 1 auto`, min-width 0)
+		   while the two `.cm-btn` beside it wrapped their labels to two
+		   lines and grew to 49px, so one row carried 44px and 49px
+		   controls side by side and the search box was unusable. Letting
+		   the row wrap gives the search its own line. */
+		flex-wrap: wrap;
+	}
+	/* A search is the one control that becomes useless when squeezed, so
+	   it keeps a real floor and wraps rather than shrinking. */
+	.cm-head-row__action .cm-search { flex: 1 1 100%; }
+	.cm-head-row__action .cm-btn { white-space: nowrap; }
 }
 
 /* ---------- post / article head ----------
@@ -440,7 +478,13 @@
 	   has to measure and hardcode. */
 	min-height: var(--tap);
 	padding: 0.6em 1.3em;
-	border-radius: 0;
+	/* --radius-sm, the same corner the inputs use. MEASURED on rpm's
+	   login at 390px: `.cm-btn--primary` computed `border-radius: 0px`
+	   while every input beside it computed 6px, so the primary action
+	   was the only sharp-cornered thing on the page. A lone square
+	   control reads as an unstyled <button> that got a background and
+	   missed its CSS - it was the loudest defect on the screen. */
+	border-radius: var(--radius-sm);
 	font-family: var(--font-mono);
 	font-size: var(--text-xs);
 	line-height: 1.2;
@@ -489,11 +533,63 @@
 	text-underline-offset: 4px;
 	text-decoration-color: var(--ink-faint);
 }
+/* Ghost is defined by what it does NOT have: no fill, and a transparent
+   border, so it reads as text beside a real button. That works only while
+   hover exists. On a touch device there is no hover, so the control stays
+   invisible for its whole life.
+
+   MEASURED on rpm's Certificates in WebKit at 390px: `.cm-btn--ghost`
+   "Upload Custom" computed to `border: 1px solid transparent`,
+   `background: transparent`, `color: #9c9c9c` on a near-black surface -
+   a 162x44 button that looked exactly like a sentence, sitting next to a
+   filled primary button. Giving it the border the hover state would have
+   given it restores the affordance without changing the desktop look. */
+@media (pointer: coarse) {
+	.cm-btn--ghost {
+		border-color: var(--line);
+		color: var(--ink);
+	}
+}
 
 /* The small variant is for a dense row (a toolbar, a table cell), not for
-   the primary action on a phone. It steps back below the tap floor on
-   purpose; on a touch viewport use the base button. */
+   the primary action on a phone. On a FINE pointer it steps below the tap
+   floor on purpose - density is the entire point of the variant. */
 .cm-btn--sm { padding: 0.4em 0.9em; font-size: var(--text-xs); min-height: 0; }
+
+/* On a TOUCH viewport the small variant takes the full floor, because a
+   thumb is the thing that has to hit it.
+
+   MEASURED in WebKit, and this rule replaces `--tap-sm: 44px`, which was
+   added to force the floor unconditionally and made a mistake worth
+   recording:
+
+     - `.cm-btn--sm { min-height: var(--tap-sm) }` with `--tap-sm: 44px`
+       computed 44px - EXACTLY `.cm-btn`'s height - at 402 and at 375 and
+       at desktop 1280. A modifier that renders the same box as its base is
+       not a modifier; the variant was dead, and every existence test was
+       green because the class was still DEFINED and still RENDERED. A
+       token whose value can only equal another token's is a no-op knob.
+     - `min-height: 0` alone (the behaviour before that token) rendered 28px
+       on a PHONE: rpm's Edit Rate Limit / Edit Force SSL Domain buttons,
+       two per card, 64% of the 44px floor, measured on a real handset
+       viewport. That one was the original defect and it was real.
+
+   Both measurements are true at once, and they disagree because the answer
+   is not a property of the LABEL's size - it is a property of the POINTER
+   and the control's ROLE. Same mechanism `.cm-copy` uses one block down,
+   and the same one `.cm-state__actions .cm-btn` uses at the empty state.
+
+   So the floor is asserted per pointer, and the dense-row decision
+   survives where it belongs: 28px next to its neighbours on a mouse, 44px
+   for a thumb on a phone.
+
+   It must live in THIS file and not in base.css's coarse-pointer block:
+   base.css loads first, and `.cm-btn--sm { min-height: 0 }` is declared
+   later at equal specificity, so a base.css rule would lose the cascade
+   silently and this whole decision would vanish with a green suite. */
+@media (pointer: coarse) {
+	.cm-btn--sm { min-height: var(--tap); }
+}
 .cm-btn--block { width: 100%; }
 
 .cm-btn-group { display: flex; gap: var(--space-3); flex-wrap: wrap; }
@@ -817,6 +913,16 @@ button.cm-row:hover { background: var(--bg-2); }
 	font-size: var(--text-micro);
 	white-space: nowrap;
 	flex: 0 0 auto;
+	/* MEASURED on rpm's Proxy Hosts at 390px: a meta strip holding an
+	   EDITABLE control overflowed its card by 46-101px and was hard
+	   clipped, because `flex: 0 0 auto` + `nowrap` makes the strip
+	   unshrinkable while its content is not. The fix belongs here
+	   rather than at each call site: a meta strip must never be able
+	   to paint outside its parent. `min-width: 0` lets the flex item
+	   shrink; the strip keeps its intrinsic size when it fits, which
+	   is the whole point of a fixed meta slot. */
+	min-width: 0;
+	max-width: 100%;
 }
 
 /* A meta slot is a fixed, unshrinkable strip by default - correct for a
@@ -838,8 +944,41 @@ button.cm-row:hover { background: var(--bg-2); }
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--space-2);
+
 }
 .cm-row__meta--wrap > * { min-width: 0; }
+.cm-row__meta--wrap > * { min-width: 0; }
+/* The other direction: a meta slot whose contents are ONE string that
+   must not break across lines. MEASURED on rpm in WebKit at 390px:
+   the `→ ip : port` slot was left wrappable and broke into two rows -
+   the address and port on the first, the arrow and a stranded colon
+   on the second - which reads as a layout fault rather than a value.
+   The slot is given its own full line by `.cm-row__body--wrap`, so
+   here it only has to refuse to split itself. */
+.cm-row__meta--nowrap {
+	white-space: nowrap;
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: baseline;
+	gap: var(--space-1);
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* The same slot when its parts make ONE value - `→ 192.168.1.104:80`.
+   A flex gap applies between EVERY child, so with `--space-1` the
+   punctuation picked up a space on each side and the address rendered
+   `192.168.1.104 : 80`. MEASURED in WebKit at 390px on rpm. The gap
+   belongs between the arrow and the address, not inside the address. */
+/* The arrow and the ADDRESS get one space. Nothing else does: the colon
+   and the port are punctuation inside a single value, and MEASURED at
+   390px a blanket `* + *` margin put 4px on each side of the colon, so
+   the address read `192.168.1.104 : 80`. The first child is the arrow
+   and the second is the address; everything after that is inside the
+   value and must be flush. */
+.cm-row__meta--tight { gap: 0; }
+.cm-row__meta--tight > *:first-child + * { margin-left: 0.35em; }
 
 /* A row body is a nowrap flex line by default - title, desc and meta on
    one line, which is right when the row is a summary. It has to give way
@@ -922,6 +1061,73 @@ button.cm-row:hover { background: var(--bg-2); }
 .cm-prose h2::before { content: '## '; color: var(--ink-faint); }
 .cm-prose a { color: var(--ink-dim); }
 .cm-prose a:hover { color: var(--ink); }
+
+/* ---------- prose measure ----------
+   A reading column NARROWER than the default one, for the case the
+   library kept missing: prose that shares a page with an aside.
+
+   `body` gets `--maxw`, which is sized for a single column of prose
+   across the full page. Put prose in a `.cm-split` beside an aside and
+   the prose column is still the full page width, so the line length is
+   set by the PAGE rather than by the reader's column - measured on
+   oem-portfolio's project page at 1440px, whose record block ran to
+   roughly 1500px of line.
+
+   The consumer that hit this hardcoded `max-width: 68ch`, which is
+   exactly `--measure`. That is the whole argument for the class: the
+   value was already a token, and a token the library already owns was
+   being re-typed as a literal by the one consumer that needed it.
+
+   The `> :first-child` reset is not tidiness: a `.cm-head` above this
+   column carries its own top margin, and inside a grid item that
+   margin lands the whole block off the rhythm the rest of the page
+   sets. MEASURED on the migrated page: 40px of dead space above the
+   first paragraph without it. */
+.cm-prose-measure { max-width: var(--measure); }
+.cm-prose-measure > :first-child { margin-top: 0; }
+
+/* ---------- prose inline link ----------
+   A link that RUNS INSIDE a sentence. This one is a measured bug, not
+   a style choice, and it is the reason the class exists.
+
+   The tap floor is applied to bare `a` by the coarse-pointer block in
+   base.css. `min-height` does nothing on an inline box, so every link
+   inside running prose silently escaped that floor: MEASURED in WebKit
+   at an iPhone viewport on oem-portfolio, the words "projects page"
+   came out 34px tall against a 44px floor meant to be unreachable from
+   inside a paragraph.
+
+   `inline-block` is the only display that honours the height while
+   still flowing inside the sentence. The vertical padding is then
+   REMOVED from the line box with a matching negative margin, so the hit
+   area grows to the floor without the paragraph gaining a line of space
+   around it - a plain `padding` here is what makes a page of prose
+   visibly looser on a phone.
+
+   This was discovered as a dead rule in oem-portfolio (zero emitters)
+   carrying a comment explaining a real measurement. The rule went, the
+   measurement came here: a lesson with no markup is not surface.
+
+   It also carries an AFFORDANCE, which is the part the tap floor does
+   not buy. `base.css` sets bare `a` to `--ink-dim` with no underline,
+   and `.cm-prose` sets its own body to `--ink`, so a link inside a
+   paragraph measured 2.24:1 against the text AROUND it in dark
+   (2.13:1 in light) - a link quieter than its own sentence, while
+   still clearing AA against the page at 7.21:1 / 8.49:1. Both numbers
+   are true and only the first one matters here: the comparison that
+   decides whether a reader sees a link is the paragraph, not the page.
+   So the link is underlined, which is how a link reads without colour
+   at all. */
+.cm-prose a.cm-inline-link,
+.cm-inline-link {
+	display: inline-block;
+	min-height: var(--tap);
+	padding: var(--space-3) 0;
+	margin: calc(var(--space-3) * -1) 0;
+	text-decoration: underline;
+	text-decoration-color: var(--ink-faint);
+	text-underline-offset: 0.18em;
+}
 
 /* ---------- prose table ----------
    A table that lives INSIDE a paragraph of prose, not a data grid. The
@@ -1153,6 +1359,22 @@ button.cm-row:hover { background: var(--bg-2); }
 }
 .cm-back:hover .cm-back__arrow,
 .cm-back:focus-visible .cm-back__arrow { transform: translateX(-0.2em); }
+/* MEASURED in WebKit against an isolated control host (not against the
+   siblings it happened to sit beside): `.cm-back` computed to 27.19px tall
+   at 390px AND at 1440px, against a --tap floor of 44px. The comment above
+   had claimed it took the floor on a coarse pointer for as long as the
+   rule existed, and no such rule existed anywhere in the sheet - the
+   claim was true in the comment and false in the cascade. A back link is
+   the FIRST thing a thumb touches on a detail page, so this is the row
+   where the floor matters most, the same case `.cm-crumbs` was promoted
+   into the library for.
+
+   It is `inline-flex`, so `min-height` does apply (an inline box would
+   ignore it), and the extra height sits ABOVE the baseline rather than
+   pushing the surrounding prose down. */
+@media (pointer: coarse) {
+	.cm-back { min-height: var(--tap); }
+}
 
 @media (max-width: 680px) {
 	.cm-rows--inline .cm-row__desc,
@@ -1708,6 +1930,14 @@ button.cm-row:hover { background: var(--bg-2); }
 	border: 1px solid var(--line);
 	border-radius: var(--radius-sm);
 	-webkit-overflow-scrolling: touch;
+	/* A wide table that scrolls horizontally has no scrollbar affordance
+	   on many phone touch UIs. A subtle left edge fade hints the content
+	   extends beyond the viewport, while preserving the clean look.
+	   MEASURED on rpm: access-log is 806px inside a 308px scroll box
+	   (over by 498px) with no visible scrollbar — no hint it scrolls.
+	   Applied to the wrapper so every table page benefits. */
+	-webkit-mask-image: linear-gradient(to right, #000 0%, #000 92%, transparent 100%);
+	mask-image: linear-gradient(to right, #000 0%, #000 92%, transparent 100%);
 }
 .cm-table { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
 /* Sticky needs the wrapper to be the scroll box, not the page. */
@@ -1754,9 +1984,18 @@ button.cm-row:hover { background: var(--bg-2); }
    row as wide as the worst one. Truncate with an ellipsis so the value
    is still identifiable on hover. */
 .cm-table__truncate {
-	max-width: 20rem;
+	/* A chip inside a card is not a table cell: 20rem is wider than a
+	   390px phone, so a long value ran to the card edge and was guil-
+	   lotined by the viewport with no ellipsis. MEASURED on rpm:
+	   `mrxlab-net-le` cut mid-word with nothing to show it was cut.
+	   `min-width: 0` is load-bearing: as a flex item the default
+	   `min-width: auto` floors it at its content width, so the max-width
+	   below never applied and the text was cut with no marker at all. */
+	max-width: 12rem;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 /* The control inside a table cell.
 
@@ -1882,7 +2121,15 @@ button.cm-row:hover { background: var(--bg-2); }
 	padding: 0.15em 0.6em;
 	border: 1px solid var(--line);
 	border-radius: 4px;
-	background: var(--bg-3);
+	/* --panel-nested, NOT --bg-3. MEASURED on rpm at 390px: a chip
+	   filled --bg-3 (#161616) sits INSIDE a card filled
+	   --panel-nested (#1a1a1a) and is therefore DARKER than the
+	   container holding it - luminance 22 against 26. The page's most
+	   common element ranked below its own parent: 49 chips against 25
+	   cards on the certificates view, all advertising themselves first.
+	   A chip is a label, and a label inside a surface is raised off it,
+	   never recessed into it. */
+	background: var(--surface-raised);
 	font-family: var(--font-mono);
 	font-size: max(var(--min-font), var(--text-micro));
 	line-height: 1.4;
@@ -1946,8 +2193,32 @@ button.cm-row:hover { background: var(--bg-2); }
 	margin: 1.4rem auto 0; padding-top: var(--space-4);
 	border-top: 1px dashed var(--line);
 	font-family: var(--font-mono); font-size: var(--text-micro); color: var(--ink-faint);
+	/* The status line is a ROW for the same reason the meta row is: a
+	   status is read as a sequence ("● nominal │ ● sig: origin only"), and
+	   a sequence needs a separator that cannot strand. A single-part
+	   `status="..."` is one flex item and lays out exactly as the old bare
+	   text did - the row only earns its keep when there are two or more
+	   fragments to separate. */
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0 var(--space-2);
 }
 .cm-footer__dot { color: var(--ink-dim); margin-right: 0.35em; }
+/* The SAME pairing as `.cm-footer__meta`: the separator is a `::before` on
+   the part it PRECEDES, so it is impossible for a wrapped line to END with
+   one. The alternative (`::after` on `:not(:last-child)`, which is what the
+   hand-rolled footer in dev-blog shipped) strands a dot on every line but
+   the last - MEASURED live at 390/360/320/402px, two stranded dots each.
+   Same negative-left-margin trick, for the same reason: hang the dot INTO
+   the gap so it does not widen the row and push a part onto a new line. */
+.cm-footer__status-part:not(:first-child)::before {
+	content: '│';
+	color: var(--ink-faint);
+	opacity: 0.6;
+	margin-left: calc(-1 * var(--space-2));
+	margin-right: var(--space-2);
+}
 /* The separator between footer meta fragments.
 
    It used to be a `·` inside its own <span class="cm-footer__bar">, which
@@ -3603,6 +3874,150 @@ button.cm-row:hover { background: var(--bg-2); }
 }
 .cm-card__link:hover { text-decoration: underline; }
 
+/* ---------- project card: an entry in a WORK index ----------
+   The one thing oem/work had that nothing in this system owned: a card
+   whose WHOLE surface is the link (no `.cm-card__link` child to stretch),
+   whose blurb and note sit in the middle and whose stack of `.cm-tag`s is
+   pinned to the BOTTOM of every card in a row, so a row of cards with
+   different blurb lengths still reads as one band.
+
+   It was 100 lines of hand-rolled CSS living in one consumer
+   (`oem-portfolio/src/styles/global.css`), which is exactly the shape
+   `.cm-crumbs` was promoted out of gantree for: a second implementation
+   no library fix can reach. It is NOT a `.cm-card` modifier, because a
+   card here has no head/body/foot nesting and no footer bar - a modifier
+   would carry `overflow: hidden` and `position: relative` rules the shape
+   never wants, and the consumer would have to cancel each one.
+
+   `.cm-cards` is deliberately NOT reused for the grid: it resolves to
+   `minmax(20rem, 1fr)` with `align-items: start`, and a project row
+   needs the children to STRETCH (`align-items: stretch`, the default) so
+   `height: 100%` and the bottom-pinned stack have something to fill. At
+   17rem the cards also stay two-up at the tablet widths where a 20rem
+   floor drops to one. */
+
+.cm-projects {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	/* auto-fit, not a fixed 2: the project count is data. A fixed pair
+	   strands a card on an odd count and `1fr` alone stretches a lone
+	   card across the whole page. */
+	grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+	gap: var(--space-4);
+}
+.cm-projects > li { margin: 0; min-width: 0; display: flex; }
+.cm-projects > li > * { flex: 1 1 auto; min-width: 0; }
+
+.cm-project {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	height: 100%;
+	padding: var(--space-5);
+	background: var(--panel-nested);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	text-decoration: none;
+	transition: border-color var(--cm-t) var(--cm-ease);
+}
+.cm-project:hover, .cm-project:focus-visible { border-color: var(--ink-dim); }
+
+.cm-project__top {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+.cm-project__name {
+	font-weight: 700;
+	color: var(--ink);
+	/* A long repo name must not push the period off the card and widen
+	   the grid - the same failure the stat tile guards against. */
+	overflow-wrap: break-word;
+	min-width: 0;
+}
+.cm-project__period {
+	font-size: max(var(--min-font), 0.72rem);
+	color: var(--ink-faint);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+.cm-project__blurb {
+	font-size: max(var(--min-font), 0.9rem);
+	color: var(--ink-dim);
+	line-height: 1.6;
+	margin: 0;
+}
+/* The em dash is generated, so a caller cannot render one themselves and
+   produce "— — blurb". It is the one separator in this system still
+   emitted by CSS rather than by the runtime, because it is a single
+   character attached to a single optional slot and there is no wrapped
+   line for it to strand on (see the footer-separator note for why that
+   distinction matters). */
+.cm-project__blurb::before {
+	content: '\2014\00a0';
+	color: var(--ink-faint);
+}
+.cm-project__note {
+	font-size: max(var(--min-font), 0.78rem);
+	color: var(--ink-faint);
+	line-height: 1.6;
+	margin: 0;
+	padding-top: var(--space-2);
+	border-top: 1px dashed var(--line);
+}
+/* The stack line, pushed to the bottom of every card in a row so the
+   cards read as one band even when the blurbs differ in length.
+   `margin-top: auto` is the whole trick, and it only works because
+   `.cm-projects > li` stretches and `.cm-project` is `height: 100%`. */
+.cm-project__stack {
+	margin: auto 0 0;
+	padding-top: var(--space-3);
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1) var(--space-2);
+	align-items: center;
+	font-size: max(var(--min-font), 0.72rem);
+	color: var(--ink-faint);
+}
+
+/* A reserved slot. Dashed border and faint ink, deliberately: it has to
+   read as "nothing here yet" rather than as a card that failed to load.
+   It is a `<div>`, not an `<a>`, so it carries no hover state and no
+   focus stop - there is nothing to go to, and a focusable placeholder is
+   a tab stop that goes nowhere. */
+.cm-project--pending {
+	border-style: dashed;
+	border-color: var(--line);
+	min-height: 7.5rem;
+	justify-content: space-between;
+}
+.cm-project--pending .cm-project__name { color: var(--ink-faint); font-weight: 400; }
+/* A lone em-dash at the top of a reserved card reads as a broken glyph
+   rather than as "no title yet", so the LABEL is the only text and it
+   carries the whole meaning - which is why the blurb keeps --ink-dim
+   here instead of following the name down to --ink-faint. */
+.cm-project--pending .cm-project__blurb {
+	color: var(--ink-dim);
+	letter-spacing: 0.04em;
+}
+
+/* A project page's own stack of tags, in the aside. NOT a variant of
+   `.cm-project__stack`: that one is bottom-pinned inside a flex card and
+   pins itself with `margin-top: auto`, which would be inert - and
+   confusing - in a static aside. */
+.cm-project-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	list-style: none;
+	margin: 0 0 var(--space-5);
+	padding: 0;
+}
+.cm-project-tags li { margin: 0; }
+
 /* ---------- meter ----------
    A labelled proportion bar. The system had no honest way to show
    "24% of this exam is one domain", which is a number, so it is a
@@ -4297,7 +4712,14 @@ button.cm-link:focus-visible {
 	flex: 0 0 auto;
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--ink-dim);
-	background: var(--bg-2);
+	/* --panel-nested, NOT --bg-2. MEASURED on rpm at 390px: a badge
+	   filled --bg-2 (#101010) sitting on a --panel (#111111) is one
+	   255th of a difference apart - luminance 16 against 17, a
+	   contrast ratio of 1.008. The border was carrying the entire
+	   edge and the fill did none, so a badge and the panel that
+	   holds it read as the same plane. In a dark UI a nested
+	   surface is RAISED: it must be LIGHTER than its parent. */
+	background: var(--panel-nested);
 	box-shadow: inset 3px 0 0 var(--ink);
 	color: var(--ink);
 }
@@ -4324,7 +4746,9 @@ button.cm-link:focus-visible {
 	display: inline-flex;
 	border: 1px solid var(--line);
 	border-radius: var(--radius-sm);
-	background: var(--bg-3);
+	/* Same rule as .cm-chip: a segmented control lives ON a card, so
+	   it must sit above that card's fill, not below it. */
+	background: var(--surface-raised);
 	overflow: hidden;
 	max-width: 100%;
 	/* A long option set wraps onto a second line rather than running
@@ -4456,6 +4880,137 @@ button.cm-link:focus-visible {
    colour. The one thing they must agree on is that the two are the same
    object: a block you read and a block you edit, in the same type and
    the same frame, so switching between them does not move the text. */
+/* ---------- search ----------
+   A filter control. Distinct from .cm-inline, which styles a value being
+   edited in place: a search box is a persistent four-sided bordered field
+   with no dotted underline. Before this existed, six rpm pages reached for
+   .cm-inline to wrap a search input and inherited the dotted underline plus
+   the inline-editable affordance, which read as "edit me in place" rather
+   than "type to filter". Ten rpm pages ship this markup today. */
+.cm-search {
+	display: inline-flex;
+	align-items: center;
+	position: relative;
+	width: 100%;
+	/* A floor, not a floor of zero. MEASURED on rpm's Certificates in
+	   WebKit at 390px: sharing a row with two buttons, this box shrank to
+	   75px - wide enough to show the magnifier and nothing else. Inside
+	   the narrow-viewport header row it takes `flex: 1 1 100%` instead;
+	   everywhere else this is the guard. */
+	min-width: 11rem;
+}
+/* rpm's SearchField.tsx emits this modifier and the library never defined
+   it, so the wide variant silently rendered at the default measure.
+   It is a WIDTH modifier and nothing else - a search field in a toolbar
+   has the same box, the same gutter arithmetic and the same tap floor. */
+.cm-search--wide { width: 100%; }
+.cm-search__input {
+	width: 100%;
+	min-width: 0;
+	font-family: var(--font-body);
+	/* The 16px FORM-TEXT FLOOR, which iOS needs to stop zooming the
+	   viewport on focus. `var(--text-sm)` is 0.875rem = 14px, and this
+	   rule (0,1,0) beats nothing that would put the floor back: the base
+	   `input:not(...)` chain is (0,6,1), but it EXCLUDES .cm-search__input
+	   by name, so nothing else sets a font-size here at all.
+	   MEASURED in WebKit at 390px and 375px: at `var(--text-sm)` the
+	   field computed font-size 14px, so tapping it zoomed the whole page
+	   and left the reader panned into a layout they could not get back
+	   from. The floor is not a nicety on a text input; it is the
+	   difference between a working search field and a broken one. */
+	font-size: max(var(--min-font), 1rem);
+	color: var(--ink);
+	background: var(--panel);
+	border: 1px solid var(--ink-dim);
+	border-radius: var(--radius-sm);
+	/* Left gutter is DERIVED from the icon, not guessed: the glyph is
+	   `position: absolute; left: var(--space-3)` and 1em wide, so it ends
+	   at space-3 + 1em. Adding space-2 lands the text one step past it.
+	   MEASURED in WebKit at 390px: without the icon allowance the
+	   placeholder ran UNDER the magnifier by the glyph's width; with an
+	   earlier `1.25em` fudge it sat 9px too far right and squeezed the
+	   hint. */
+	padding-left: calc(var(--space-3) + 1em + var(--space-2));
+	/* The right gutter clears .cm-search__clear, so a typed value never
+	   runs under it. The clear button's own width is a TOKEN now (it was
+	   a bare 32px), so this derivation cannot drift from the thing it
+	   has to clear. */
+	padding-right: calc(var(--space-3) + var(--search-clear) + var(--space-2));
+	padding-top: var(--space-2);
+	padding-bottom: var(--space-2);
+	min-height: var(--tap);
+	appearance: none;
+}
+.cm-search__input::placeholder {
+	color: var(--ink-dim);
+	/* A placeholder longer than the field is CLIPPED mid-glyph by WebKit -
+	   an input cannot ellipsize its own placeholder, and the half-drawn
+	   letter reads as a rendering fault. MEASURED on rpm's Certificates at
+	   390px: "Search name, domain, provider..." measured 289px of text
+	   against 220px of available space, so it cut off mid-word with nothing
+	   to say more text followed. The real fix is a shorter string; this is
+	   the floor under that, not a substitute for it. */
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+/* MEASURED in WebKit at 390/375/1440: this rule shipped
+   `outline: 2px solid var(--focus)` and --focus was NOT a declared token.
+   An undefined custom property inside a shorthand makes the WHOLE
+   declaration invalid at computed-value time, so `outline-style`
+   computed to `none`: the field had NO focus ring at all, in every
+   theme, on every page. A probe that only reads the CSS text sees a
+   perfectly well-formed declaration and reports nothing wrong - this
+   is the undefined-token class of bug that only shows up as a computed
+   value. The token is declared now, and a test asserts the resolution. */
+.cm-search__input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.cm-search__icon {
+	position: absolute;
+	/* Anchored to the same space-3 as the input's left padding, so the
+	   glyph and the text gutter can never drift apart. */
+	left: var(--space-3);
+	pointer-events: none;
+	display: inline-flex;
+	align-items: center;
+	color: var(--ink-dim);
+}
+.cm-search__icon > svg {
+	/* An icon tracks the text beside it, so this is 1em and not a scale
+	   step - the same rule .cm-btn > svg states. Without it a lucide
+	   glyph is a replaced element at its own default size (24px), which
+	   is wider than the 16px the padding arithmetic above assumes and
+	   pushes the placeholder under it. */
+	flex: 0 0 auto;
+	width: 1em;
+	height: 1em;
+}
+.cm-search__clear {
+	position: absolute;
+	right: var(--space-1);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--search-clear);
+	height: var(--search-clear);
+	background: transparent;
+	border: 0;
+	color: var(--ink-dim);
+	cursor: pointer;
+}
+.cm-search__clear > svg { flex: 0 0 auto; width: 1em; height: 1em; }
+.cm-search__clear:hover { color: var(--ink); }
+/* The clear button is 32px of chrome inside a 44px field. On a coarse
+   pointer that box is under the tap floor the rest of the library
+   enforces, so it grows to the floor and the field's own min-height
+   keeps the row from growing with it. A 12px shortfall in the one
+   control a thumb aims at is exactly what the floor exists to stop. */
+@media (pointer: coarse) {
+	.cm-search__clear {
+		width: var(--tap);
+		height: var(--tap);
+	}
+}
+
 .cm-code {
 	width: 100%;
 	font-family: var(--font-mono);
