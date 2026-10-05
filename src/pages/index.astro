@@ -93,14 +93,16 @@ function hostOf(href: string): string {
 	   .cm-list-head, .cm-rows, .cm-row and its parts. The rules below are
 	   only what the library deliberately does not own.
 
-	   The one place links still overrides the library is the hero width:
-	   a link hub is a single narrow column, not a reading page. */
-	.links {
-		margin-top: var(--space-7);
-	}
+	   Group separation is the stack's job: `<main>` is a
+	   `cm-stack cm-stack--section`, so these sections get the same
+	   24px rhythm as every other top-level block. A page-local
+	   `margin-top` here would stack on top of that gap and make this
+	   one page the only one reading as 56px.
 
-	.links + .links {
-		margin-top: var(--space-7);
+	   `.links` stays as the section wrapper so the markup reads as a
+	   group, but it owns no spacing of its own any more. */
+	.links {
+		/* spacing comes from the parent stack */
 	}
 
 	/* A link hub's title is the page's whole point, so it is set larger
