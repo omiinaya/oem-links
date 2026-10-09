@@ -356,6 +356,64 @@ test('the page does not carry its own theme runtime', async () => {
 	);
 });
 
+test('the header renders the library component, not a parallel bar', async () => {
+	// The last fork on this site. The header kept `class=""` — no `.cm-*`
+	// class anywhere — while the footer had already moved to the library, so
+	// the bar was a second implementation of surface the design system owns.
+	// MEASURED in WebKit at 375/390/1280 before this change: the theme toggle
+	// rendered 32x32 with `min-height: auto`, and the GitHub link 18x18, both
+	// sizing themselves from CSS this file carried. The library floors
+	// `.cm-icon-btn` at `var(--tap)` = 44px on a coarse pointer, and a
+	// hand-rolled `.theme-toggle { width: 32px }` is outside that media query
+	// and can never be floored by it. A fix a consumer does not render is not
+	// a fix, which is the whole reason the components are installable.
+	const header = await readFile(
+		new URL('../src/components/Header.astro', import.meta.url),
+		'utf8',
+	);
+	const code = header.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+
+	assert.match(
+		code,
+		/from '\.\.\/astro\/Header\.astro'/,
+		'Header.astro must render the library component',
+	);
+	assert.match(
+		code,
+		/brand=\{SITE\.title\}/,
+		'the brand label must come from the site config, not the library placeholder',
+	);
+	assert.match(
+		code,
+		/label: 'GitHub'/,
+		'the GitHub glyph must ride extraLinks, which is what the library keys its built-in mark off',
+	);
+
+	// The superseded fork must not creep back. `theme-toggle` is the class the
+	// old scoped block sized to 32px; `brand`/`controls` are the other three
+	// the fork owned. The PROJECT class list in the class-ownership test below
+	// only spans index.astro, so a header fork would slip past it.
+	for (const old of ['theme-toggle', 'brand', 'brand-prompt', 'brand-name', 'controls']) {
+		assert.ok(
+			!new RegExp(`class="[^"]*\\b${old}\\b`).test(code),
+			`Header.astro reintroduced the project class .${old}; the library component owns it`,
+		);
+	}
+	// The fork carried its own <style> block; the library ships those rules in
+	// components.css so a NON-Astro consumer gets them too. A scoped block here
+	// is the drift.
+	assert.doesNotMatch(
+		code,
+		/<style/,
+		'Header.astro must not carry its own <style>; the library owns the header rules',
+	);
+	assert.ok(
+		!code.includes('backdrop-filter'),
+		'the fork\'s blur is inert over an opaque --header-bg and must not return; ' +
+			'the library removed it because it makes the header a containing block for the drawer',
+	);
+});
+
 test('the layout declares the project theme key and loads the runtime', async () => {
 	const layout = await readFile(
 		new URL('../src/layouts/Layout.astro', import.meta.url),

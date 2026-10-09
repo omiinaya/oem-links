@@ -1,113 +1,59 @@
 ---
-import { SITE_TITLE, AUTHOR_HANDLE } from '../consts';
+/**
+ * oem/links <Header> — a THIN WRAPPER over the library's header.
+ *
+ * This file used to be a hand-rolled `<header>`: its own sticky bar, its own
+ * brand markup and ~105 lines of scoped CSS. It was the LAST fork on this
+ * site — the footer is already the library's `astro/Footer.astro` and all
+ * fifteen `src/astro/` components are vendored — but the bar still rendered
+ * `class=""`, with no `.cm-*` class anywhere, so none of the rules the
+ * library owns could reach it.
+ *
+ * MEASURED in WebKit at 375x667 / 390x844 / 1280x900 (2026-10-09), against
+ * the LIVE site and against a local build of HEAD, which agreed exactly
+ * because the fork had not drifted:
+ *
+ *   header            class=""  — `.cm-header` never applied
+ *   theme toggle      32x32     — `min-height: auto`; no tap floor at all
+ *   header background rgb(10,10,10) — already fully opaque, so the
+ *                                   `backdrop-filter: blur(8px)` in the old
+ *                                   scoped block was inert over it
+ *   GitHub link       18x18     — width came entirely from the inline SVG
+ *   brand             x=20, 117.03x25.81 at 375 (300 at 1280)
+ *
+ * That is the whole argument for the shared component: the 44px coarse-pointer
+ * tap floor, the icon link's pinned box and the scroll shadow are rules the
+ * library already measured and fixed. A parallel implementation does not have
+ * them, and a consumer cannot opt into a fix it does not render. `.cm-icon-btn`
+ * is the one that matters on a phone: on a coarse pointer the library sizes it
+ * `var(--tap)` = 44px, while a hand-rolled `.theme-toggle { width: 32px }`
+ * sits outside that media query and can never be floored by it.
+ *
+ * What this file owns now is only this site's own decisions:
+ *
+ *   - the brand label, taken from `astro/config.ts` (the ONE place that sets
+ *     this site's identity) rather than left to the library placeholder;
+ *   - that a link page has NOWHERE to navigate. `links` is empty on purpose,
+ *     and the library renders no burger and no link row when it is empty —
+ *     the old file's `<!-- No nav -->` comment was a decision with no markup
+ *     behind it, and now it is a decision with no markup behind it;
+ *   - the GitHub glyph as an `extraLinks` entry. The library ships the mark
+ *     for the well-known icon links so the two cannot be separated: it keys
+ *     off `label`, and an extraLink with neither a mark nor a slot renders a
+ *     zero-width, unclickable link and nothing else.
+ *
+ * The theme toggle is the library's `showThemeToggle` button. Both the old
+ * hand-rolled one and the library's carry `data-cm-theme-toggle`, which is
+ * the selector the runtime binds (cli-mono.js TOGGLE_SEL), so this migration
+ * changes the box the button gets, not the wiring behind it.
+ */
+import Header from '../astro/Header.astro';
+import { SITE } from '../astro/config';
+import { AUTHOR_GITHUB } from '../consts';
 ---
 
-<header>
-	<nav>
-		<a href={`${import.meta.env.BASE_URL}`} class="brand" aria-label="Home">
-			<span class="brand-prompt" aria-hidden="true">$</span>
-			<span class="brand-name">{SITE_TITLE}</span>
-			<span class="cursor" aria-hidden="true"></span>
-		</a>
-
-		<!-- No nav: this page is a single self-contained list of links, so
-		     there is nowhere else on-site to link to. -->
-		<div class="controls">
-			<button
-			class="theme-toggle"
-			type="button"
-			data-cm-theme-toggle
-			aria-label="Toggle theme"
-			title="Toggle theme"
-		>
-				<span class="icon" data-cm-theme-icon aria-hidden="true"></span>
-			</button>
-			<a href={`https://github.com/${AUTHOR_HANDLE}`} rel="me" aria-label="GitHub">
-				<span class="cm-sr-only">GitHub</span>
-				<svg viewBox="0 0 16 16" aria-hidden="true" width="18" height="18">
-					<path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-				</svg>
-			</a>
-		</div>
-	</nav>
-</header>
-
-<style>
-	header {
-		position: sticky;
-		top: 0;
-		z-index: 100;
-		margin: 0;
-		padding: 0 var(--gutter);
-		background: var(--header-bg);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		border-bottom: 1px solid var(--line);
-	}
-	nav {
-		max-width: var(--maxw);
-		margin: 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		height: 60px;
-	}
-	.brand {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		text-decoration: none;
-		color: var(--ink);
-		font-family: var(--font-mono);
-		font-size: 0.95rem;
-	}
-	.brand-prompt { color: var(--ink-faint); }
-	.brand-name { font-weight: 700; color: var(--ink); }
-	.brand:hover .brand-name { color: var(--accent-bright); }
-	.cursor {
-		display: inline-block;
-		width: 0.55em;
-		height: 1em;
-		background: var(--ink);
-		margin-left: 0.1em;
-		animation: blink 1.2s step-end infinite;
-	}
-	@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-	.controls { display: flex; align-items: center; gap: 0.85rem; }
-	/* Both controls are bare glyphs on the header surface: no box, no border.
-	   An outlined button next to an unoutlined one reads as a mistake. */
-	.theme-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 32px;
-		height: 32px;
-		padding: 0;
-		border: 0;
-		background: transparent;
-		color: var(--ink-dim);
-		cursor: pointer;
-		font-size: 0.95rem;
-		transition: color 0.12s ease, background 0.12s ease;
-	}
-	.theme-toggle:hover { color: var(--ink); background: var(--bg-2); }
-	.theme-toggle:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
-	.controls a { display: flex; align-items: center; color: var(--ink-faint); transition: color 0.12s ease; }
-	.controls a:hover { color: var(--ink); }
-
-	/* ============ responsive header ============ */
-	@media (max-width: 640px) {
-		nav {
-			flex-wrap: wrap;
-			height: auto;
-			row-gap: 0.4rem;
-			padding: 0.55rem 0;
-		}
-		.brand { margin-right: auto; }
-	}
-
-	@media (max-width: 360px) {
-		.controls { gap: 0.6rem; }
-	}
-</style>
+<Header
+	brand={SITE.title}
+	homeHref={import.meta.env.BASE_URL}
+	extraLinks={[{ href: AUTHOR_GITHUB, label: 'GitHub' }]}
+/>
