@@ -7,7 +7,50 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+- **The header is the library's now.** `src/components/Header.astro` was the
+  last hand-rolled fork on this site: its own sticky bar, its own brand markup
+  and ~105 lines of scoped CSS, rendering `class=""` with no `.cm-*` class at
+  all, so none of the rules oem-ui owns could reach it. It is now a thin
+  wrapper over `src/astro/Header.astro`, carrying only this site's decisions
+  (the brand label from `astro/config.ts`, `links={[]}` because a link page has
+  nowhere to navigate, and the GitHub glyph via `extraLinks`).
+
+  MEASURED in WebKit at 375x667 / 390x844 / 1280x900, against the live site and
+  against a local build of HEAD (which agreed exactly — the fork had not
+  drifted):
+
+  | | before (hand-rolled) | after (library) |
+  | --- | --- | --- |
+  | header | `class=""`, no `.cm-*` | `.cm-header` |
+  | theme toggle, coarse pointer | 32x32, `min-height: auto` | **44x44**, `min-height: 44px` |
+  | theme toggle, fine pointer | 32x32 | 32x32 (unchanged) |
+  | GitHub link, coarse pointer | 18x18, sized by its inline SVG | **44x44** |
+  | header height | 50.59px @375, 61px @1280 | 62.59px @375, 61px @1280 |
+
+  The tap target is the point: `.cm-icon-btn` is floored at `var(--tap)` (44px)
+  by the library under `@media (pointer: coarse)`, and a hand-rolled
+  `.theme-toggle { width: 32px }` sits outside that media query, so the fix was
+  unreachable from this side. `.cm-header` also carries the scroll shadow. The
+  scoped `backdrop-filter: blur(8px)` was inert over an already-opaque
+  `rgb(10,10,10)` `--header-bg` and is gone (the library removed its own blur
+  because it makes the header a containing block for the mobile drawer).
+
+  The runtime wiring is unchanged: both the old and the library button carry
+  `data-cm-theme-toggle`, and a click still flips `data-theme` and writes
+  `oem-links-theme` (verified in WebKit, no page errors).
+
 ### Added
+- `tests/verify-header-webkit.py` — measures the BUILT page in WebKit: the bar
+  is `.cm-header`, both controls are >= `--tap` on a coarse pointer, the GitHub
+  mark renders, no superseded fork class appears, and no burger or link row is
+  emitted for an empty `links`. Exits non-zero on failure; proven to fail
+  against a build of the old fork.
+- A `the header renders the library component` contract in
+  `tests/links.test.ts`: the library component is imported, the brand comes
+  from the site config, the GitHub mark rides `extraLinks`, and the fork
+  classes / a local `<style>` / the inert blur cannot return. Proven by
+  mutation — restoring the old fork fails it (22 pass / 1 fail).
 - A **personal** section below `socials`, holding the blog. The single-section
   assumption is gone: `GROUP_ORDER` is now `['socials', 'personal']`, and the
   blog row carries `group: 'personal'`.

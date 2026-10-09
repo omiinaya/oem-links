@@ -19,9 +19,12 @@ tracking, no runtime, no database. The entire content of the page is one file:
   layout, page, or `<link>` tags. A test enforces this. Do not add a nav, a
   "read the blog" row, or a feed/sitemap link. The style is shared with the
   blog; the content is not.
-- The design system files are byte-identical copies of the blog's. Do not
-  "improve" them here in a way that drifts from the blog. If the blog's
-  styling changes, re-copy the files.
+- The design system is **oem-ui** (`/root/projects/oem-ui`), vendored with
+  `scripts/install.sh --astro` into `src/styles/cli-mono/`, `src/js/` and
+  `src/astro/`. Do not hand-edit anything under those three paths; re-run the
+  installer. This site's own layer is `src/styles/site.css`, loaded last.
+  `src/astro/config.ts` is the one vendored file the installer never
+  overwrites, because it carries this site's identity.
 - Links live in `src/data/links.ts`. Resist adding conditional logic to
   `.astro` files for per-link behaviour; extend the data shape instead.
 - Static output only. If a feature needs a server, it belongs in a different
@@ -31,7 +34,7 @@ tracking, no runtime, no database. The entire content of the page is one file:
 ## Before you commit
 
 ```bash
-npm test        # 13 content checks on the link data
+npm test        # node:test content checks on the link data and the chrome
 npm run build   # static build; also asserts icon name/import agreement
 ```
 
@@ -46,10 +49,18 @@ check the output:
 
 ```bash
 npm run build
-grep -c 'class="link-row"' dist/index.html   # expect one per visible link
-grep -o 'class="link-title"' dist/index.html | wc -l
+grep -c 'class="cm-row' dist/index.html     # expect one row per visible link
 grep -o 'list-head"[^>]*>[^<]*' dist/index.html   # expect: socials
-grep -c 'oem-log' dist/index.html            # expect 0, this page is self-contained
+grep -c 'cm-header' dist/index.html         # expect 1: the library header
+grep -c 'class=""' dist/index.html          # expect 0: no forked chrome left
+grep -c 'oem-log' dist/index.html           # expect 0, this page is self-contained
+```
+
+Then measure it in WebKit, not just visually — the tap targets are a media
+query and a source grep cannot see them:
+
+```bash
+/root/.venvs/mau/bin/python tests/verify-header-webkit.py http://127.0.0.1:4321/
 ```
 
 Then look at it. `astro preview --port 4324` and open
@@ -68,30 +79,32 @@ Then look at it. `astro preview --port 4324` and open
 
 ## Why there is no nav
 
-`Header.astro` has no `internal-links` block, because there is no second page
-to link to. The `HeaderLink.astro` component and the nav's CSS were removed
-rather than left dormant. If a second page is ever genuinely needed, bring the
-nav back then, and re-check that none of its links point at the blog.
+`Header.astro` renders the library's `src/astro/Header.astro` with
+`links={[]}`, because there is no second page to link to — an empty list emits
+no burger and no link row. If a second page is ever genuinely needed, pass the
+links then, and re-check that none of them point at the blog.
 
 ## Theme key
 
-`oem-links-theme`, defined as `THEME_KEY` in `src/consts.ts` and injected into
-the header's inline script via `define:vars`. It must not become
-`oem-log-theme`; the blog and this site keep separate preferences on the same
-origin and would otherwise fight over one key.
+`oem-links-theme`, declared as `data-cm-theme-key` on `<html>` in
+`src/layouts/Layout.astro` and read from the DOM by the library's FOUC guard and
+runtime. It must not become `oem-log-theme`; the blog and this site keep
+separate preferences on the same origin and would otherwise fight over one key.
 
 ## Project layout
 
 ```
 src/
-  components/    BaseHead, Footer, Header          (style, mostly copied)
+  astro/         the vendored oem-ui components (do not hand-edit)
+  components/    BaseHead, Footer, Header   (thin wrappers over src/astro/)
   data/links.ts  the entire content of the page
+  js/            the vendored oem-ui runtime + theme guard
   layouts/       Layout.astro wrapper
   lib/           icon-names.ts (Lucide data) + icons.ts (resolver, build-checked)
                  LinkedIn.astro, XLogo.astro (brand marks, Simple Icons paths)
   pages/         index.astro
-  styles/        global.css (byte-identical to the blog's)
-tests/           node:test content checks
+  styles/        cli-mono/ (vendored) + site.css (this site's own layer)
+tests/           node:test content checks + verify-*-webkit.py harnesses
 ```
 
 ## Adding a page

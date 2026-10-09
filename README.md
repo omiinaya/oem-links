@@ -101,24 +101,53 @@ blank slot rather than crashing the build, so rely on `npm test` to catch typos.
 
 ## Design system
 
-`src/styles/global.css`, `BaseHead.astro`, `Footer.astro`, the favicons, and
-the two Atkinson font files started as **byte-identical copies** of the blog's
-versions. They are the house style; change them here and the blog does not
-follow, and vice versa. When the blog's design system changes, copy the files
-over again rather than hand-editing the divergence.
+The design system is **oem-ui**, vendored from
+`/root/projects/oem-ui` with `scripts/install.sh --astro`:
 
-Two components have since diverged on purpose, because this page is its own
-thing rather than a satellite of the blog:
+| vendored | lives at | re-synced by |
+| --- | --- | --- |
+| `tokens.css`, `base.css`, `components.css` | `src/styles/cli-mono/` | `install.sh` |
+| `cli-mono.js` (runtime), `cli-mono-theme-guard.js` | `src/js/` | `install.sh` |
+| the Astro components | `src/astro/` | `install.sh --astro` |
 
-- `Header.astro` has **no nav**. There is no second page to link to, so the
-  nav and its `internal-links` CSS were removed, along with `HeaderLink.astro`.
-  Its theme key is `oem-links-theme` (not the blog's `oem-log-theme`) so the
-  two sites keep separate light/dark preferences.
-- `BaseHead.astro` drops the blog's `rel="sitemap"` and RSS `<link>` tags.
-  They pointed at files this site never generates and both 404'd.
+Re-run the installer to pull a library change in; do not hand-edit anything
+under those three paths. `src/styles/site.css` is **this site's own layer**,
+loaded last so it wins on equal specificity — keep it small. If a rule is
+about look-and-feel rather than this site's content, it belongs in the library.
+
+`src/astro/config.ts` is the one vendored directory's file the installer
+deliberately never overwrites: it carries this site's identity. It restates the
+values in `src/consts.ts` rather than importing them, so `tests/links.test.ts`
+asserts the two are equal — an installer that republished the library's
+placeholders over a live page would otherwise fail nothing.
+
+The migration is **complete**: the header and the footer both render library
+components, and there is no `class=""` chrome left. That matters because the
+library's rules are unreachable from a parallel implementation — a hand-rolled
+`.theme-toggle { width: 32px }` sits outside the library's
+`@media (pointer: coarse)` rule and can never pick up its 44px tap floor.
+Measured in WebKit before and after the header migration:
+
+| | hand-rolled (before) | library (after) |
+| --- | --- | --- |
+| header | `class=""`, no `.cm-*` | `.cm-header` |
+| theme toggle, coarse | 32x32, `min-height: auto` | **44x44**, `min-height: 44px` |
+| GitHub link, coarse | 18x18 (sized by its inline SVG) | **44x44** |
+| header background | already `rgb(10,10,10)` — the scoped `backdrop-filter: blur(8px)` was inert over it | `.cm-header`'s opaque `--header-bg` |
+
+`Header.astro` is now a thin wrapper: the brand label from `astro/config.ts`,
+`links={[]}` (a link page has nowhere to navigate, so the library renders no
+burger and no link row), and the GitHub glyph as an `extraLinks` entry, which
+is the shape the library keys its built-in mark off. Its theme key stays
+`oem-links-theme` (not the blog's), so the two sites keep separate light/dark
+preferences.
+
+`BaseHead.astro` drops the blog's `rel="sitemap"` and RSS `<link>` tags: they
+pointed at files this site never generates and both 404'd.
 
 In an Astro template, `//` outside a `<script>` renders as visible page text.
 Comments that are not inside a script or style block must be HTML comments.
+
 
 ## Environment variables
 
@@ -147,6 +176,21 @@ and Node cannot type-strip `.ts` files inside `node_modules`
 (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`). The icon name list and the
 icon import map are cross-checked instead by reading `icons.ts` as text, plus
 a build-time assertion in `icons.ts` itself.
+
+The `verify-*-webkit.py` harnesses measure the **built** page in WebKit (the
+engine Omar reviews on) and need Playwright from `/root/.venvs/mau`, not the
+system Python. Pass the URL to check:
+
+```bash
+npm run build && npx astro preview --host 0.0.0.0 --port 4321
+/root/.venvs/mau/bin/python tests/verify-header-webkit.py http://127.0.0.1:4321/
+/root/.venvs/mau/bin/python tests/verify-footer-webkit.py http://127.0.0.1:4321/
+/root/.venvs/mau/bin/python tests/verify-top-level-rhythm.py http://127.0.0.1:4321/
+```
+
+`verify-header-webkit.py` is the one a source-level test cannot replace: it
+measures the coarse-pointer tap targets, and a source test can only assert the
+component was imported. Each exits non-zero on failure.
 
 ## Deploying
 
